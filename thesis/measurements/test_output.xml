@@ -1,0 +1,9 @@
+<measurement identifier='test_output'>
+    <parameter type='filename' value='measurements/TestMeasurement.csv'></parameter>
+    <parameter type='output' column='1' header='Step' value='current_step'></parameter>
+    <parameter type='output' column='2' header='House_1' value='household_deposits_1' ></parameter>
+    <parameter type='output' column='3' header='House_2' value='household_deposits_2' ></parameter>
+    <parameter type='output' column='4' header='Bank_1' value='bank_loans_1' ></parameter>
+    <parameter type='output' column='5' header='Bank_2' value='bank_loans_2' ></parameter>
+    <parameter type='output' column='6' header='Firm' value='firm_deposits' ></parameter>
+</measurement>
