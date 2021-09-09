@@ -105,11 +105,11 @@ class Household(BaseAgent):
         # CONVERSELY, IF YOU WANT TO READ THE VALUE, DON'T USE THE FULL NAMES
         # INSTEAD USE __getattr__ POWER TO CHANGE THE COMMAND FROM
         # instance.static_parameters["xyz"] TO instance.xyz - THE LATTER IS PREFERRED
-        self.parameters["labour"] = 0.0  # labour to sell every step (labour endowment)
-        self.parameters["propensity_to_save"] = 0.40  # propensity to save, percentage of income household wants to save as deposits
-        self.parameters["active"] = 0  # this is a control parameter checking whether bank is active
+        #self.parameters["labour"] = 0.0  # labour to sell every step (labour endowment)
+        #self.parameters["propensity_to_save"] = 0.40  # propensity to save, percentage of income household wants to save as deposits
+        #self.parameters["active"] = 0  # this is a control parameter checking whether bank is active
         # The below is not needed, but kept just in case it will become needed
-        # state_variables["sweep_labour"] = 0.0  # labour left in the simulation step
+        # self.state_variables["sweep_labour"] = 0.0  # labour left in the simulation step
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -168,12 +168,29 @@ class Household(BaseAgent):
     # ------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
+    # balance
+    # net payments and receipts plus initial deposits
+    # returns balance
+    # -------------------------------------------------------------------------
+    def balance(self):
+        balance = self.get_account("deposits")
+        for tranx in self.accounts:
+            type_ = tranx.type_
+            if type_ == "payment":
+                balance -= tranx.amount
+            elif type_ == "receipt":
+                balance += tranx.amount
+        return balance
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
     # get_new_savings
     # placeholder for a function determining savings size of a household
     # -------------------------------------------------------------------------
     def get_new_savings(self, low, high):
         pass
     # -------------------------------------------------------------------------
+
 
     # -------------------------------------------------------------------------
     # check_consistency
@@ -217,10 +234,10 @@ class Household(BaseAgent):
     #   maturity        - time (in steps) to maturity
     #   time_of_default - control variable checking for defaulted transactions
     # -------------------------------------------------------------------------
-    def add_transaction(self,  type_, asset, from_id,  to_id,  amount,  interest,  maturity, time_of_default, environment):
+    def add_transaction(self, from_id,  to_id,  amount, environment):
         from src.transaction import Transaction
         transaction = Transaction()
-        transaction.this_transaction(type_, asset, from_id, to_id, amount, interest, maturity, time_of_default)
+        transaction.this_transaction(from_id, to_id, amount)
         transaction.add_transaction(environment)
     # -------------------------------------------------------------------------
 
@@ -261,36 +278,4 @@ class Household(BaseAgent):
     # -------------------------------------------------------------------------
     def __getattr__(self, attr):
         return super(Household, self).__getattr__(attr)
-    # -------------------------------------------------------------------------
-
-    # -------------------------------------------------------------------------
-    # supply_of_labour(price)
-    # this is for testing for now, makes the supply of labour inelastic
-    # households want to sell all labour
-    # TEST ONLY, REMOVE LATER IF NOT NECESSARY
-    # -------------------------------------------------------------------------
-    def supply_of_labour(self, price):
-        return self.labour
-    # -------------------------------------------------------------------------
-
-    # -------------------------------------------------------------------------
-    # supply_of_labour_new(price)
-    # this is for testing for now, makes the supply of labour inelastic
-    # households want to sell all labour
-    # TEST ONLY, REMOVE LATER IF NOT NECESSARY
-    # -------------------------------------------------------------------------
-    def supply_of_labour_new(self, price):
-        # return min(self.labour, max(0, ((self.labour + 1)*price - self.get_account("deposits"))/(2*price)))
-        return (self.labour+1)/2
-    # -------------------------------------------------------------------------
-
-    # -------------------------------------------------------------------------
-    # supply_of_labour_solow(price)
-    # Supply of labour function given roughly the Solow model
-    # that is maximising utility ln(consumption) + ln(25 - labour_supplied)
-    # 25 is max supply + 1
-    # We assume that households consume a fraction of their income
-    # -------------------------------------------------------------------------
-    def supply_of_labour_solow(self, price):
-        return min(self.labour, max(0, ((self.labour + 1) * price - self.get_account("deposits"))/(2*price)))
     # -------------------------------------------------------------------------

@@ -113,9 +113,6 @@ class Runner(BaseRunner):
             self.updater.do_update(environment, i)
             # write the state of the system
             measurement.write_to_file()
-            # HELPER, to be removed in production
-            print(environment.households[0])
-            print(environment.firms[0])
         # Close the output file at the end of the simulation
         measurement.close_file()
     # ------------------------------------------------------------------------

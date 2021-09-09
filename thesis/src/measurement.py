@@ -164,23 +164,47 @@ class Measurement(BaseMeasurement):
     # Wrapper for functions returning the desired values to be written
     # -------------------------------------------------------------------------
     def wrapper(self, ident):
+        balance = 0
+        for household in self.environment.households:
+            balance += + household.balance()
+        
+        if ident == "balance":
+            return balance
+
         if ident == "current_step":
             return self.runner.current_step+1
-
-        if ident == "household_deposits_1":
-            return self.environment.households[0].get_account("deposits")
-
-        if ident == "household_deposits_2":
-            return self.environment.households[1].get_account("deposits")
-
-        if ident == "bank_loans_1":
-            return self.environment.banks[0].get_account("loans")
-
-        if ident == "bank_loans_2":
-            return self.environment.banks[1].get_account("loans")
-
-        if ident == "firm_deposits":
-            return self.environment.firms[0].get_account("deposits")
-
         
+        if ident == "h_1_1":
+            return self.environment.households[3].balance()
+
+        if ident == "h_1_2":
+            return self.environment.households[2].balance()
+
+        # if ident == "h_1_3":
+        #     return self.environment.households[7].get_account("deposits")
+
+        # if ident == "h_1_4":
+        #     return self.environment.households[4].get_account("deposits")
+
+        if ident == "h_2_1":
+            return self.environment.households[1].balance()
+
+        if ident == "h_2_2":
+            return self.environment.households[0].balance()
+
+        # if ident == "h_2_3":
+        #     return self.environment.households[3].get_account("deposits")
+
+        # if ident == "h_2_4":
+        #     return self.environment.households[0].get_account("deposits")
+
+        balance_bank = 0
+        for bank in self.environment.banks:
+            balance_bank += + bank.balance()
+
+        if ident == "balance_bank":
+         return balance_bank
+
+
+
     # -------------------------------------------------------------------------

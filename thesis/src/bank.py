@@ -147,6 +147,22 @@ class Bank(BaseAgent):
     # ------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
+    # balance
+    # net payments and receipts
+    # returns balance
+    # -------------------------------------------------------------------------
+    def balance(self):
+        balance = self.get_account("deposits")
+        for tranx in self.accounts:
+            type_ = tranx.type_
+            if type_ == "payment":
+                balance += tranx.amount
+            elif type_ == "receipt":
+                balance -= tranx.amount
+        return balance
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
     # check_consistency
     # checks whether the assets and liabilities have the same total value
     # the types of transactions that make up assets and liabilities is
