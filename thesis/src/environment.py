@@ -23,7 +23,8 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 import logging
 import os
 from abm_template.src.baseconfig import BaseConfig
-
+import networkx as nx
+from network import Network
 
 # -------------------------------------------------------------------------
 #
@@ -48,6 +49,9 @@ class Environment(BaseConfig):
 
     # Frequency of batching
     batch = 0
+
+    # Network
+    network = Network("")
 
     static_parameters = {}  # a dictionary containing all static parameters (with a fixed value)
     variable_parameters = {}  # a dictionary containing all variable parameters (with a range of possible values)
@@ -252,6 +256,7 @@ class Environment(BaseConfig):
         self.static_parameters["household_directory"] = ""
         self.static_parameters["batch"] = 0
         self.variable_parameters = {}
+        self.network = nx.DiGraph()
 
         # first, read in the environment file
         environment_filename = environment_directory + identifier + ".xml"
@@ -311,6 +316,9 @@ class Environment(BaseConfig):
         
         # Set enivornment.batch equal to static parameter from config file
         self.batch = self.static_parameters["batch"]
+
+        # Initialize networks from initialize_network method
+        self.initialize_network()
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -390,6 +398,25 @@ class Environment(BaseConfig):
             # and read parameters to the firms, only to add them to the environment
             self.households.append(household)
     # -------------------------------------------------------------------------
+
+
+    # -------------------------------------------------------------------------
+    # initialize_network
+    # Initialize network to environment from network class.
+    # 
+    # -------------------------------------------------------------------------
+    def initialize_network(self):
+        from src.network import Network
+        # New Network instance is created
+        network_struc = Network(self)
+        # Use initialize_networks method from Network class to create network 
+        # for households. Random network is created and households are assigned
+        # to nodes.
+        network_struc.initialize_networks(self)
+        # Set environment variable to random network
+        self.network = network_struc.contracts
+    # -------------------------------------------------------------------------
+
 
     # -------------------------------------------------------------------------
     # read_transactions_from_files(self,  bank_directory)

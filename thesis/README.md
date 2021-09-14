@@ -1,6 +1,41 @@
 # Masters Thesis Log
 This README serves as a log for changes made to the Agent Based Model I will be using for my thesis.
 
+## 17 September 
+
+### Current Thesis Topic 
+Using ABM to create a model for transactions between households and firms which use banks as intermediaries. The model should include realistic featuers of a modern payments system e.g. time delays when transfering funds between banks, costs of transactions, loans between banks at a market related interest rate. Then a CBDC should be introduced to the model following a realistic implementation of the technology. The improvements in total welfare as measured by increase in the sum of utility functions of the households and firms could be used to determine usefulness of CBDC.
+
+### Structure
+
+The model has 10 agents, 8 households and 2 banks. Each household is affiliated to a bank. The households are connected to each other through a random directed network. The network has an exogenous randomness parameter set to 0.5. 
+
+In the initial period, each household is endowed with 24 units of "deposits". The household balance consists of "deposits" plus the sum of "receipts" less the sum of  "payments". Each period, half of the households are randomly selected to experience a payment shock. The shock forces the household to make a payment along a randomly selected edge to another household. The amount is a stochastic variable conisting of a proportion of positive current balance. The proportion is drawn from a uniform distribution between 0.2 and 0.7. 
+
+The payment shock is recorded as a "payment" transaction from the household to its bank. The bank settles the transaction by making a "receipt" transaction to the intended recipient household. If the household making the payment and the household receiving the payment bank with the same bank then the settlement takes place. Otherwise, the bank stores the payment for settlement when the period is a multiple of the "batch" length. This structure intends to model the automatic clearing house and RTGS mechanism in a modern payment system.
+
+### Code Changes
+
+The following lists the additions to the baseagents from Black Rhino ABM found at: https://github.com/blackrhinoabm/BlackRhino/tree/master
+
+Network
+* Variables
+    - contracts (empty networkx directed graph)
+
+* Methods
+    - initialize_networks (Create random networkx directed graph with number of nodes equal to number of households. Randomness parameter is set exogenously. Node attributed set as the household identifier)
+
+Environment 
+* Variables
+    - network (empty Network class instance)
+
+* Methods
+    - initialize_network (Initialize Network instance. Call initialize_networks method and set enivornment.network class variable as the network.)
+    - initialize (Call initialize_network method)
+
+Updater
+* Variable
+    - payment_shock (Changed random recipient of payment. Now recipient is randomly select household that has edge with payment shock household)
 
 ## 10 September
 
@@ -10,7 +45,7 @@ Using ABM to create a model for transactions between households and firms which 
 
 ### Structure
 
-The model has 6 agents, 4 households and 2 banks. Each household is affiliated to a bank. In the initial period, each household is endowed with 24 units of "deposits". The household balance consists of "deposits" plus "receipts" minus "paymets". Each period, 2 households are randomly selected to experience a payment shock. The shock forces the household to make a payment to a random other household. The amount is a stochastic variable conisting of a proportion of positive current balance. The proportion is drawn from a uniform distribution between 0.1 and 0.3. The payment shock is recorded as a "payment" transaction from the household to its bank. The bank then either settles the transaction by making a "receipt" transaction to the intended recipient household. If the household making the payment and the household receiving the payment bank with the same bank then the settlement takes place. Otherwise, the bank stores the payment for settlement when the period is a multiple of the "batch" length. This structure intends to model the automatic clearing house and RTGS mechanism in a modern payment system.
+The model has 6 agents, 4 households and 2 banks. Each household is affiliated to a bank. In the initial period, each household is endowed with 24 units of "deposits". The household balance consists of "deposits" plus "receipts" minus "payments". Each period, 2 households are randomly selected to experience a payment shock. The shock forces the household to make a payment to a random other household. The amount is a stochastic variable conisting of a proportion of positive current balance. The proportion is drawn from a uniform distribution between 0.1 and 0.3. The payment shock is recorded as a "payment" transaction from the household to its bank. The bank then either settles the transaction by making a "receipt" transaction to the intended recipient household. If the household making the payment and the household receiving the payment bank with the same bank then the settlement takes place. Otherwise, the bank stores the payment for settlement when the period is a multiple of the "batch" length. This structure intends to model the automatic clearing house and RTGS mechanism in a modern payment system.
 
 ### Code Changes
 

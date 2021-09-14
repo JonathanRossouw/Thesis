@@ -128,28 +128,38 @@ class Updater(BaseModel):
     #  of deposits to a random household that shares an edge.
     # -------------------------------------------------------------------------
     def payment_shock(self, environment, time):
+        import networkx as nx
         # Determine which households receive shock
         # Half of households receive shock
         shocks = random.sample(environment.households, k = int(round(len(environment.households)/2)))
         for household in shocks:
-            # Determine who receives payments, for now this is a random household
-            # Later this is be determined by the edges in the network
-            b = [x for i,x in enumerate(environment.households) if x!= household]
-            to = random.choice(b)
+            # Determine who receives payments as a random choice from edge in network
+
+            # Get dictionary of network attribues
+            G = nx.get_node_attributes(environment.network, "id")
+            # Get key corresponding to household making payment
+            a_id = G.values().index(household.identifier)
+            # Select random edge from household making payments edges
+            b_id = random.sample(environment.network.edges(a_id), 1)
+            # Determine the key value of the other household along edge
+            b_index = b_id[0][1]
+            # Get household identifier corresponding edge
+            to = G[b_index]
+
             # Payment is a random uniform proportion of the households positive balance
             if household.balance() > 0:
-                payment = round(household.balance() * random.uniform(0.1, 0.3), 0)
+                payment = round(household.balance() * random.uniform(0.2, 0.7), 0)
             else:
                 payment = 0.0
             # Store details of transaction
-            environment.store.append({"from_" : household.bank_acc, "to" : to.identifier, "amount" : payment, "time" : time})
+            environment.store.append({"from_" : household.bank_acc, "to" : to, "amount" : payment, "time" : time})
             # Transfer funds from household to bank
             # Print Balance before and after transaction
             print("{}s balance is {}f").format(household.identifier, environment.get_agent_by_id(household.identifier).balance())
             environment.new_transaction(type_="payment", asset='', from_= household.identifier, to = household.bank_acc, amount = payment, interest=0.00, maturity=0, time_of_default=-1)
             print("{}s balance is {}f").format(household.identifier, environment.get_agent_by_id(household.identifier).balance())
             # We print the action of selling to the screen
-            print("{}s paid {}f to {}s for {}s at time {}d.".format(household.identifier, payment, household.bank_acc, to.identifier, time))
+            print("{}s paid {}f to {}s for {}s at time {}d.".format(household.identifier, payment, household.bank_acc, to, time))
         logging.info("  payments made on step: %s",  time)
 # -------------------------------------------------------------------------    
  
