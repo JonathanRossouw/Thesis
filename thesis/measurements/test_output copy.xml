@@ -1,0 +1,14 @@
+<measurement identifier='test_output'>
+    <parameter type='filename' value='measurements/TestMeasurement.csv'></parameter>
+    <parameter type='output' column='1' header='Step' value='current_step'></parameter>
+    <parameter type='output' column='2' header='Balance' value='balance' ></parameter>
+    <parameter type='output' column='3' header='H_1_1' value='h_1_1' ></parameter>
+    <parameter type='output' column='4' header='H_1_2' value='h_1_2' ></parameter>
+    <parameter type='output' column='5' header='H_1_3' value='h_1_3' ></parameter>
+    <parameter type='output' column='6' header='H_1_4' value='h_1_4' ></parameter>
+    <parameter type='output' column='7' header='H_2_1' value='h_2_1' ></parameter>
+    <parameter type='output' column='8' header='H_2_2' value='h_2_2' ></parameter>
+    <parameter type='output' column='9' header='H_2_3' value='h_2_3' ></parameter>
+    <parameter type='output' column='10' header='H_2_4' value='h_2_4' ></parameter>
+    <parameter type='output' column='11' header='Balance_bank' value='balance_bank' ></parameter>
+</measurement>
