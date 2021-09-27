@@ -1,0 +1,6 @@
+<household identifier='household_3_2'>
+    <parameter name='deposits' value='24.00'></parameter>
+    <parameter name='propensity_to_save' value='0.4'></parameter>
+    <parameter name='bank_acc' value='bank_3'></parameter>
+    <transaction type='deposits' asset='' from='bank_3' to='household_3_2' amount='24' interest='0.00' maturity='0' time_of_default='-1'></transaction>
+</household>

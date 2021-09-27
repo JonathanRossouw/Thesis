@@ -41,7 +41,8 @@ class Bank(BaseAgent):
     parameters = {}  # parameters of the specific bank
     state_variables = {}  # state variables of the specific bank
     accounts = []  # all accounts of a bank (filled with transactions)
-
+    store = []  # store transaction info
+    households = []
     #
     #
     # CODE
@@ -100,6 +101,8 @@ class Bank(BaseAgent):
         self.parameters = {}  # parameters of the specific bank
         self.state_variables = {}  # state variables of the specific bank
         self.accounts = []  # all accounts of a bank (filled with transactions)
+        self.store = [] # store transaction info
+        self.households = [] # Households that are customers of bank
         # DO NOT EVER ASSIGN PARAMETERS BY HAND AS DONE BELOW IN PRODUCTION CODE
         # ALWAYS READ THE PARAMETERS FROM CONFIG FILES
         # OR USE THE FUNCTIONS FOR SETTING / CHANGING VARIABLES
@@ -147,19 +150,53 @@ class Bank(BaseAgent):
     # ------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
+    # get_households
+    # create list of household identifier for households that are customers with
+    # bank
+    # -------------------------------------------------------------------------
+    def get_households(self, environment):
+        import networkx as nx
+        G = environment.network
+        # Loop through nodes in the network
+        for u, dat in G.nodes(data=True):
+        # Loop through all households
+            # If household is customer append to list
+            if environment.get_agent_by_id(dat["id"]).bank_acc == self.identifier:
+                self.households.append(dat["id"])
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
     # balance
     # net payments and receipts
     # returns balance
     # -------------------------------------------------------------------------
     def balance(self):
-        balance = self.get_account("deposits")
+        # Initialize balance with deposits from households first with regards to
+        # the cash
+        assets = self.get_account("deposits")
+        # Then with regards to the liabilities
+        liabilities = self.get_account("deposits")
+        # Loop through all transactions in accounts
         for tranx in self.accounts:
+            # Set transaction variable
             type_ = tranx.type_
-            if type_ == "payment":
-                balance += tranx.amount
-            elif type_ == "receipt":
-                balance -= tranx.amount
-        return balance
+            from_ = tranx.from_.identifier
+            # If type is receipt then amount is being sent to another bank or 
+            # from storage to another households deposits account thus it reduces
+            # balance
+            if type_ == "settle":
+                if from_ == self.identifier:
+                    assets -= tranx.amount
+                    liabilities -= tranx.amount
+                elif from_ != self.identifier:
+                    assets += tranx.amount
+                    liabilities += tranx.amount
+        print("{}s assets are {}f").format(self.identifier, assets)
+        if assets == liabilities:
+            balance = "True"
+        elif assets != liabilities:
+            balance = "False"
+        return {"balance":balance, "assets":assets}
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -170,7 +207,7 @@ class Bank(BaseAgent):
     # -------------------------------------------------------------------------
     def check_consistency(self):
         assets = ["loans", "cash"]
-        liabilities = ["deposits"]
+        liabilities = ["deposits", "payment"]
         return super(Bank, self).check_consistency(assets, liabilities)
     # -------------------------------------------------------------------------
 

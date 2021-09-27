@@ -24,7 +24,7 @@ import logging
 import os
 from abm_template.src.baseconfig import BaseConfig
 import networkx as nx
-from network import Network
+from src.network import Network
 
 # -------------------------------------------------------------------------
 #
@@ -43,9 +43,6 @@ class Environment(BaseConfig):
     households = []  # a list containing all households (instances of class Household)
     #firms = []  # a list containing all firms (instances of class Firm)
     agents = []
-    
-    # Store payments for batching
-    store = []
 
     # Frequency of batching
     batch = 0
@@ -319,6 +316,10 @@ class Environment(BaseConfig):
 
         # Initialize networks from initialize_network method
         self.initialize_network()
+
+        # Initialize households that are customers of banks
+        for banx in self.banks:
+            banx.get_households(self)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

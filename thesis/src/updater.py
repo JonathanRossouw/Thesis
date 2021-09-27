@@ -22,7 +22,7 @@ from abm_template.src.basemodel import BaseModel
 import random
 import logging
 from src.transaction import Transaction
-
+from src.network import Network
 # -------------------------------------------------------------------------
 #  class Updater
 # -------------------------------------------------------------------------
@@ -113,10 +113,7 @@ class Updater(BaseModel):
         # sweep_labour is a state variable and can be depleted within the sweep
         if time == 0:
             for household in environment.households:
-                endow = Transaction()
-                endow.set_type_("deposits")
-                endow.set_amount(household.deposits)
-                household.accounts.append(endow)
+                environment.new_transaction(type_="deposits", asset='', from_= household.identifier, to = household.bank_acc, amount = household.deposits, interest=0.00, maturity=0, time_of_default=-1)
             logging.info("  deposit endowed on step: %s",  time)
         # Keep on the log with the number of step, for debugging mostly
     # -------------------------------------------------------------------------
@@ -129,38 +126,20 @@ class Updater(BaseModel):
     # -------------------------------------------------------------------------
     def payment_shock(self, environment, time):
         import networkx as nx
-        # Determine which households receive shock
-        # Half of households receive shock
-        shocks = random.sample(environment.households, k = int(round(len(environment.households)/2)))
-        for household in shocks:
-            # Determine who receives payments as a random choice from edge in network
-
-            # Get dictionary of network attribues
-            G = nx.get_node_attributes(environment.network, "id")
-            # Get key corresponding to household making payment
-            a_id = G.values().index(household.identifier)
-            # Select random edge from household making payments edges
-            b_id = random.sample(environment.network.edges(a_id), 1)
-            # Determine the key value of the other household along edge
-            b_index = b_id[0][1]
-            # Get household identifier corresponding edge
-            to = G[b_index]
-
-            # Payment is a random uniform proportion of the households positive balance
-            if household.balance() > 0:
-                payment = round(household.balance() * random.uniform(0.2, 0.7), 0)
-            else:
-                payment = 0.0
-            # Store details of transaction
-            environment.store.append({"from_" : household.bank_acc, "to" : to, "amount" : payment, "time" : time})
-            # Transfer funds from household to bank
-            # Print Balance before and after transaction
-            print("{}s balance is {}f").format(household.identifier, environment.get_agent_by_id(household.identifier).balance())
-            environment.new_transaction(type_="payment", asset='', from_= household.identifier, to = household.bank_acc, amount = payment, interest=0.00, maturity=0, time_of_default=-1)
-            print("{}s balance is {}f").format(household.identifier, environment.get_agent_by_id(household.identifier).balance())
-            # We print the action of selling to the screen
-            print("{}s paid {}f to {}s for {}s at time {}d.".format(household.identifier, payment, household.bank_acc, to, time))
-        logging.info("  payments made on step: %s",  time)
+        import numpy as np
+        # Set G as the network
+        G = environment.network
+        # Loop through nodes in the network
+        for u, dat in G.nodes(data=True):
+            # For each node randomly select whether experiences a shock using 
+            # a random bernoulli variable with p = 0.6
+            shock = np.random.binomial(1, 0.6, 1)
+            # Shock is selected in bernoulli variable equals 1
+            if shock[0] == 1:
+                # Initialize network class instance
+                payment = Network(environment)
+                # Make payment using network class method
+                payment.payment_shock_transaction(environment, environment.get_agent_by_id(dat["id"]), time)
 # -------------------------------------------------------------------------    
  
 
@@ -172,47 +151,11 @@ class Updater(BaseModel):
     # -------------------------------------------------------------------------
     def net_settle(self,  environment, time):
         # Settle payments by with banks
-        # Print number of stored transactions
-        print(len(environment.store))
-        # Set counter for number of transactions removed
-        count = 0
+        
         # Iteratre through stored transactions
-        for tranx in environment.store[:]:
-            # Print number of iteration
-            count +=1
-            print(count)
-            # Set variables
-            from_ = tranx["from_"]
-            to = tranx["to"]
-            bank = environment.get_agent_by_id(to).bank_acc
-            payment = tranx["amount"]
-            # More transaction in same bank transfer funds each period
-            if (from_ == bank):
-                # Print balance before and after transaction
-                print("{}s balance is {}f").format(from_, environment.get_agent_by_id(from_).balance())
-                # Transfer receipt from bank to household
-                environment.new_transaction(type_="receipt", asset='', from_= from_, to = to, amount = payment, interest=0.00, maturity=0, time_of_default=-1)
-                print("{}s balance is {}f").format(tranx["from_"], environment.get_agent_by_id(tranx["from_"]).balance())
-                # Remove stored transaction
-                environment.store.remove(tranx)
-                # Print details of transaction
-                print("{}s settled payment of {}f to {}s at time {}d.".format(tranx["from_"], tranx["amount"], tranx["to"], time))
-            # Batch payments and settle every fourth period
-            elif (time % environment.batch == 0):
-                # Print balance before and after transaction
-                print("{}s balance is {}f").format(from_, environment.get_agent_by_id(from_).balance())
-                # Transfer receipt from bank to household
-                environment.new_transaction(type_="receipt", asset='', from_= from_, to = to, amount = payment, interest=0.00, maturity=0, time_of_default=-1)
-                print("{}s balance is {}f").format(tranx["from_"], environment.get_agent_by_id(tranx["from_"]).balance())
-                # Remove stored transaction
-                environment.store.remove(tranx)
-                # Print details of transaction
-                print("{}s batch settled payment of {}f to {}s at time {}d.".format(tranx["from_"], tranx["amount"], tranx["to"], time))
-        # Print number of stored transactions
-        print(len(environment.store))
-
-            
-
+        for bank_trans in environment.banks[:]:
+            settlement = Network(environment)
+            settlement.net_settle_transaction(environment, bank_trans, time)
     # -------------------------------------------------------------------------
 
 
