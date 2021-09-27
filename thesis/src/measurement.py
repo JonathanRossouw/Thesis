@@ -166,7 +166,7 @@ class Measurement(BaseMeasurement):
     def wrapper(self, ident):
         balance = 0
         for household in self.environment.households:
-            balance += household.balance()
+            balance += + household.balance()
         
         if ident == "balance":
             return balance
@@ -174,44 +174,36 @@ class Measurement(BaseMeasurement):
         if ident == "current_step":
             return self.runner.current_step+1
         
-        # if ident == "h_1_1":
-        #     return self.environment.households[5].balance()
+        if ident == "h_1_1":
+            return self.environment.households[3].balance()
 
-        # if ident == "h_1_2":
-        #     return self.environment.households[6].balance()
+        if ident == "h_1_2":
+            return self.environment.households[2].balance()
 
         # if ident == "h_1_3":
-        #     return self.environment.households[7].balance()
+        #     return self.environment.households[7].get_account("deposits")
 
         # if ident == "h_1_4":
-        #     return self.environment.households[4].balance()
+        #     return self.environment.households[4].get_account("deposits")
 
-        # if ident == "h_2_1":
-        #     return self.environment.households[1].balance()
+        if ident == "h_2_1":
+            return self.environment.households[1].balance()
 
-        # if ident == "h_2_2":
-        #     return self.environment.households[2].balance()
+        if ident == "h_2_2":
+            return self.environment.households[0].balance()
 
         # if ident == "h_2_3":
-        #     return self.environment.households[3].balance()
+        #     return self.environment.households[3].get_account("deposits")
 
         # if ident == "h_2_4":
-        #     return self.environment.households[0].balance()
+        #     return self.environment.households[0].get_account("deposits")
 
-        if ident == "b_1":
-            return self.environment.banks[1].balance()["assets"]
+        balance_bank = 0
+        for bank in self.environment.banks:
+            balance_bank += + bank.balance()
 
-        if ident == "b_2":
-            return self.environment.banks[2].balance()["assets"]
-
-        if ident == "b_3":
-            return self.environment.banks[3].balance()["assets"]
-
-        if ident == "b_4":
-            return self.environment.banks[4].balance()["assets"]
-
-        if ident == "b_5":
-            return self.environment.banks[0].balance()["assets"]
+        if ident == "balance_bank":
+         return balance_bank
 
 
 

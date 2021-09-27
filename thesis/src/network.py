@@ -55,112 +55,13 @@ class Network(object):
 		n = len(environment.households)
 		# Create random graph with number of nodes equal to number of households.
 		# Parameter determining randomness of graph treated as exogenous for now
-		self.contracts = nx.gnp_random_graph(n, 0.2,  directed=True)
+		self.contracts = nx.gnp_random_graph(n, 0.5,  directed=True)
 		# Iterate through nodes in graph and assign households to each node.
 		# Give nodes an attribute of the households ID
 		for iden, house in enumerate(environment.households):
 			self.contracts.add_node(iden, id = house.identifier)
 
 	#-------------------------------------------------------------------------
-
-	#
-	# INTER HOUSEHOLD ROUTINES  
-	#
-
-	# -------------------------------------------------------------------------
-    # payment_shock(environment, time)
-    # This function provides the payment shock. A portion of households are 
-    # randomly hit by shock. The shock dictates that households pay a portion
-    #  of deposits to a random household that shares an edge.
-    # -------------------------------------------------------------------------
-	def payment_shock_transaction(self, environment, household, time):
-		import networkx as nx
-		import random
-
-		# Get dictionary of network attribues
-		G = nx.get_node_attributes(environment.network, "id")
-		# Get key corresponding to household making payment
-		from_id = G.values().index(household.identifier)
-		# Select random edge from household making payments edges
-		to_id = random.sample(environment.network.edges(from_id), 1)
-		# Determine the key value of the other household along edge
-		to_index = to_id[0][1]
-		# Get household identifier corresponding edge
-		to_household = environment.get_agent_by_id(G[to_index])
-		# Payment is a random uniform proportion of the households positive balance
-		if household.balance() > 0:
-			payment = round(household.balance() * random.uniform(0.2, 0.7), 0)
-		else:
-			payment = 0.0
-		# Store details of transaction
-		tranx = {"from_" : household.identifier, "bank_from": household.bank_acc, "to" : to_household.identifier, "bank_to" : to_household.bank_acc, "amount" : payment, "time" : time}
-		environment.get_agent_by_id(tranx["bank_from"]).store.append(tranx)
-		# Transfer funds from household to bank
-		# Print Balance before and after transaction
-		#print("{}s balance is {}f").format(tranx["from_"], environment.get_agent_by_id(tranx["from_"]).balance())
-		environment.new_transaction(type_="payment", asset='', from_= tranx["from_"], to = tranx["bank_from"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-		#print("{}s balance is {}f").format(tranx["from_"], environment.get_agent_by_id(tranx["from_"]).balance())
-		# We print the action of selling to the screen
-		print("{}s paid {}f to {}s for {}s at time {}d.".format(tranx["from_"], tranx["amount"], tranx["bank_from"], tranx["to"], tranx["time"]))
-        #logging.info("  payments made on step: %s",  time)
-	# -------------------------------------------------------------------------   
-
-
-	#
-	# INTERBANK ROUTINES  
-	#
-
-
-	# -------------------------------------------------------------------------
-    # net_settles(environment, time)
-    # This function settles the transactions following the shock. If from and 
-    # to are at the same bank then transaction is settled. If different banks
-    # then only every fourth period is settled.
-    # -------------------------------------------------------------------------
-	def net_settle_transaction(self,  environment, bank_trans, time):
-
-        # Settle payments by with banks
-        # Print number of stored transactions
-		#print(len(bank_trans.store))
-        # Set counter for number of transactions removed
-		count = 0
-        # Iteratre through stored transactions
-		
-		for tranx in bank_trans.store[:]:
-			# Print number of iteration
-			count +=1
-			#print(count)
-			# Set variables
-			bank_to = environment.get_agent_by_id(tranx["to"]).bank_acc
-			payment = tranx["to"]
-			# More transaction in same bank transfer funds each period
-			if (tranx["bank_from"] == bank_to):
-				# Print balance before and after transaction
-				#print("{}s balance is {}f").format(tranx["bank_from"], environment.get_agent_by_id(tranx["bank_from"]).balance()["assets"])
-				# Transfer receipt from bank to household
-				environment.new_transaction(type_="receipt", asset='', from_= tranx["bank_from"], to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-				#print("{}s balance is {}f").format(tranx["bank_from"], environment.get_agent_by_id(tranx["bank_from"]).balance()["assets"])
-				# Remove stored transaction
-				bank_trans.store.remove(tranx)
-				# Print details of transaction
-				print("{}s settled payment of {}f to {}s at time {}d.".format(tranx["bank_from"], tranx["amount"], tranx["to"], time))
-			
-			# Batch payments and settle every fourth period
-			elif (time % environment.batch == 0):
-				# Print balance before and after transaction
-				#print("{}s balance is {}f").format(tranx["bank_from"], environment.get_agent_by_id(tranx["bank_from"]).balance()["assets"])
-				# Transfer receipt from bank to household
-				environment.new_transaction(type_="settle", asset='', from_= tranx["bank_from"], to = tranx["bank_to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-				environment.new_transaction(type_="receipt", asset='', from_= tranx["bank_from"], to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-				#print("{}s balance is {}f").format(tranx["bank_from"], environment.get_agent_by_id(tranx["bank_from"]).balance()["assets"])
-				# Remove stored transaction
-				bank_trans.store.remove(tranx)
-				# Print details of transaction
-				print("{}s batch settled payment of {}f to {}s at time {}d.".format(tranx["bank_from"], tranx["amount"], tranx["bank_to"], time))
-		# Print number of stored transactions
-		#print(len(environment.store))
-
-    # -------------------------------------------------------------------------
 		
 
 	#-------------------------------------------------------------------------
