@@ -40,9 +40,13 @@ class Environment(BaseConfig):
     identifier = ""  # identifier of the environment
 
     banks = []  # a list containing all banks (instances of class Bank)
+    central_bank = []  # a list containing central bank (instances of class Bank)
     households = []  # a list containing all households (instances of class Household)
     #firms = []  # a list containing all firms (instances of class Firm)
     agents = []
+    deposits_payments = 0 # Total payments made with Deposits
+    cbdc_payments = 0 # Total payments made with CBDC
+    total_payments = 0 # Measurement of total activity
 
     # Frequency of batching
     batch = 0
@@ -64,12 +68,14 @@ class Environment(BaseConfig):
     static_parameters["num_banks"] = 0  # number of banks in a simulation
     #static_parameters["num_firms"] = 0  # number of firms in a simulation
     static_parameters["num_households"] = 0  # number of households in a simulation
+    static_parameters["num_central_bank"] = 0  # number of central banks in a simulation
 
     static_parameters["batch"] = 0 # Frequency of batching
 
     static_parameters["bank_directory"] = ""  # directory containing bank config files
     #static_parameters["firm_directory"] = ""  # directory containing firm config files
     static_parameters["household_directory"] = ""  # directory containing household config files
+    static_parameters["central_bank_directory"] = ""  # directory containing central bank config files
 
     #
     #
@@ -246,9 +252,11 @@ class Environment(BaseConfig):
         self.static_parameters["num_simulations"] = 0
         self.static_parameters["num_sweeps"] = 0
         self.static_parameters["num_banks"] = 0
+        self.static_parameters["num_central_bank"] = 0
         #self.static_parameters["num_firms"] = 0
         self.static_parameters["num_households"] = 0
         self.static_parameters["bank_directory"] = ""
+        self.static_parameters["central_bank_directory"] = ""
         #self.static_parameters["firm_directory"] = ""
         self.static_parameters["household_directory"] = ""
         self.static_parameters["batch"] = 0
@@ -268,6 +276,15 @@ class Environment(BaseConfig):
         else:
             logging.error("ERROR: no bank_directory given in %s\n",  environment_filename)
 
+
+        # then read in central bank
+        if self.central_bank_directory != "":
+            if self.bank_directory != "none":  # none is used for tests only
+                self.initialize_central_bank_from_files(self.central_bank_directory)
+                logging.info("  central bank read from directory: %s",  self.central_bank_directory)
+        else:
+            logging.error("ERROR: no central_bank_directory given in %s\n",  environment_filename)
+
         # then read in all the firms
         # if self.firm_directory != "":
         #     if self.firm_directory != "none":  # none is used for tests only
@@ -285,7 +302,7 @@ class Environment(BaseConfig):
             logging.error("ERROR: no household_directory given in %s\n",  environment_filename)
 
         # add agents to the list of all agents
-        self.agents = [self.banks, self.households]
+        self.agents = [self.banks, self.households, self.central_bank]
 
         # then, initialize transactions from the config files for banks
         if self.bank_directory != "":
@@ -294,6 +311,14 @@ class Environment(BaseConfig):
                 logging.info("  banks' transactions read from directory: %s",  self.bank_directory)
         else:
             logging.error("ERROR: no bank_directory given in %s\n",  environment_filename)
+
+        # then, initialize transactions from the config files for central bank
+        if self.central_bank_directory != "":
+            if self.central_bank_directory != "none":  # none is used for tests only
+                self.read_transactions_for_central_banks(self.central_bank_directory)
+                logging.info("  central bank's transactions read from directory: %s",  self.central_bank_directory)
+        else:
+            logging.error("ERROR: no central_bank_directory given in %s\n",  environment_filename)
 
         # then, initialize transactions from the config files for firms
         # if self.firm_directory != "":
@@ -346,6 +371,32 @@ class Environment(BaseConfig):
             bank.get_parameters_from_file(bank_directory + infile,  self)
             # and read parameters to the banks, only to add them to the environment
             self.banks.append(bank)
+    # -------------------------------------------------------------------------
+
+     # -------------------------------------------------------------------------
+    # initialize_central_bank_from_files(self,  central_bank_directory)
+    # banks have to be initialized for each simulation as a number of
+    # banks might become inactive in the previous simulation
+    # this reads all config files in the provided directory and
+    # initializes banks with the contents of these configs
+    # -------------------------------------------------------------------------
+    def initialize_central_bank_from_files(self,  central_bank_directory):
+        from src.central_bank import CentralBank
+        # this routine is called more than once, so we have to reset the list of banks each time
+        while len(self.central_bank) > 0:
+            self.central_bank.pop()
+        # we list all the files in the specified directory
+        listing = os.listdir(central_bank_directory)
+        # and check if the number of files is in line with the parameters
+        if (len(listing) != self.num_central_bank):
+            logging.error("    ERROR: number of configuration files in %s (=%s) does not match num_central_bank (=%s)",
+                          central_bank_directory,  str(len(listing)), str(self.num_central_bank))
+        # we read the files sequentially
+        for infile in listing:
+            central_bank = CentralBank()
+            central_bank.get_parameters_from_file(central_bank_directory + infile,  self)
+            # and read parameters to the banks, only to add them to the environment
+            self.central_bank.append(central_bank)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -441,6 +492,31 @@ class Environment(BaseConfig):
             bank = self.get_agent_by_id(identifier)
             # then we read the transactions from the config to the appropriate bank
             bank.get_transactions_from_file(bank_directory + infile, self)
+    # -------------------------------------------------------------------------
+
+
+    # -------------------------------------------------------------------------
+    # read_transactions_from_files(self,  central_bank_directory)
+    # reads transactions for central bank from the config files
+    # -------------------------------------------------------------------------
+    def read_transactions_for_central_banks(self,  central_bank_directory):
+        from xml.etree import ElementTree
+        # we list all the files in the specified directory
+        listing = os.listdir(central_bank_directory)
+        # and check if the number of files is in line with the parameters
+        if (len(listing) != self.num_central_bank):
+            logging.error("    ERROR: number of configuration files in %s (=%s) does not match num_banks (=%s)",
+                          central_bank_directory,  str(len(listing)), str(self.num_central_bank))
+        # we read the files sequentially)
+        for infile in listing:
+            # we open the file and find the identifier of the config
+            xmlText = open(central_bank_directory + infile).read()
+            element = ElementTree.XML(xmlText)
+            identifier = element.attrib['identifier']
+            # and we find the bank with this identifier
+            central_bank = self.get_agent_by_id(identifier)
+            # then we read the transactions from the config to the appropriate bank
+            central_bank.get_transactions_from_file(central_bank_directory + infile, self)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

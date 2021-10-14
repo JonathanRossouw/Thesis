@@ -78,7 +78,7 @@ class Generate_Agents:
 			outFile = open(householdfileName,  'w')
 			
 			text = "<household identifier= 'household_" + str(i) + "_" + str(bank_acc) + "'>\n"
-			text = text + "    <parameter name='deposits' value='24.00'></parameter>\n"
+			text = text + "    <parameter name='endowment' value='24.00'></parameter>\n"
 			text = text + "    <parameter name='propensity_to_save' value='0.4'></parameter>\n"
 			text = text + "    <transaction type='deposits' asset='' from='bank_" + str(bank_acc) + "' to='household_" + str(i) + "' amount='24' interest='0.00' maturity='0' time_of_default='-1'></transaction>\n"
 			text = text + "    <parameter name='bank_acc' value='bank_"+str(bank_acc) + "'></parameter>\n"

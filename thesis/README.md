@@ -1,5 +1,83 @@
-# Masters Thesis Log
+# READ ME
+
+## How to run code
+
+- Open thesis_example.ipynb and run all. Errors should relate to libraries that are not installed.
+
+
+## Description of Code
+
+### Initialization
+
+- Loop through Banks. Each bank requests reserves from Central Bank equal to (0.5 * household endowment * number of households)/number of banks. Central Bank creates Open Market Transaction equal to requested reserves.
+
+- Loop through Households. Each household is endowed with 24 units of equity. Each household taken out a loan at the bank they are customers of against equity. Households use loans to allocate desired assets allocation bewteen deposits, CBDC and bank notes. Households make request to bank to exchange deposits for different assets. Banks decrease deposits and make request central banks to exchange reserves for requested amounts of CBDC and bank notes from households. Central Bank decreases reserves, transfers CBDC and bank notes to households, then increases banks OMT and reserves.
+
+
+### Payment Shocks
+
+- Loop through nodes on network of households.
+- Randomly assign payment shock to household.
+- Household randomly selects household with which it is a neighbour in the network to send payment to.
+- Payment amount is a random portion of total assets, including deposits, CBDC and bank notes
+- If payment is to a household which is a customer of the same bank, then preference of payment methods is deposits, CBDC then bank notes
+- If payment is to a household which is a customer of a different bank, then preference of payment methods is CBDC, bank notes then deposits. (Preferences are used to limit use of batching).
+
+
+### Payment Methods
+
+- Deposits: 
+        * Between customers of the same bank, deposit payment request is made by household to bank. Bank decreases paying households deposits and increases receiving households deposits. 
+        * Between customer of differen banks, deposit payment request is made by household to bank. Bank then decreases paying households deposits and batches the amount. When there is a settlement period, a multiple of the batch length, bank makes a settlement request to central bank. Central bank decreases reserves of paying bank and increases reserves of receiving bank. Informs receiving bank of payment. Receiving bank increases receiving households deposits.
+
+- CBDC: Paying household makes payment request to Central Bank, Central Bank decreases paying households CBDC account and increases receiving households CBDC account.
+
+- Bank Notes: Paying household makes payment request to Central Bank, Central Bank decreases paying households bank notes account and increases receiving households bank notes account.
+
+
+Currently CBDC can only be purchased using deposits.
+
+
+
+
+
+
+## Masters Thesis Log
 This README serves as a log for changes made to the Agent Based Model I will be using for my thesis.
+
+## 1 October
+
+### Current Thesis Topic 
+Using ABM to create a model for transactions between households and firms which use banks as intermediaries. The model should include realistic featuers of a modern payments system e.g. time delays when transfering funds between banks, costs of transactions, loans between banks at a market related interest rate. Then a CBDC should be introduced to the model following a realistic implementation of the technology. The improvements in total welfare as measured by increase in the sum of utility functions of the households and firms could be used to determine usefulness of CBDC.
+
+### Structure
+
+The model has 55 agents, 50 households and 5 banks. Each household is affiliated to a bank. The households are connected to each other through a random directed network. The network has an exogenous randomness parameter set to 0.2. Each household is randomly assigned as a customer of a bank.
+
+In the initial period, each household is endowed with 24 units of "deposits" which is the deposited at the household's bank through a "deposits" transaction. The household balance consists of "deposits" plus the sum of "receipts" less the sum of  "payments". Each period, households are randomly selected following a bernoulli random variable to experience a payment shock. The shock forces the household to make a payment along a randomly selected edge to another household. The amount is a stochastic variable conisting of a proportion of positive current balance. The proportion is drawn from a uniform distribution between 0.2 and 0.7. The bank balance is determined by the sum of all the "deposits" plus the sum of all "settle" transactions received less the sum of all the "settle" transactions paid.
+
+The payment shock is recorded as a "payment" transaction from the household to its bank. The bank settles the transaction by making a "receipt" transaction to the intended recipient household. If the household making the payment and the household receiving the payment bank with the same bank then the settlement takes place. Otherwise, the bank stores the payment for settlement when the period is a multiple of the "batch" length. Settlement is recorded by making a "settle" transaction from the bank to the recipient household's bank as well as a "receipt" transaction to the recipient household. This structure intends to model the automatic clearing house and RTGS mechanism in a modern payment system.
+
+Households and banks can be randomly generated through the Br_Generate_Agents class. Generated households and banks can be deleted after simulation using the 12th Notebook cell with remove = True.
+
+### Code Changes
+
+The following lists the additions to the baseagents from Black Rhino ABM found at: https://github.com/blackrhinoabm/BlackRhino/tree/master
+
+Bank
+* Method
+    - make_payment (stores transactions and creates transaction between paying household and bank)
+    - interbank_settle (loops through stored transactions, if transaction is within bank then payment is settled. If transaction invovles another bank, the only is period is a multiple of the batch length does settlement take place)
+
+Household
+* Method 
+    - initiate_payment (randomly selects households among network neighbours to receive payment. Randommly determines amount from households bank deposits)
+
+Updater
+* Method
+    - payment_shock (loop through households in network and randomly assings payment shock which calls household's initiate_payment method)
+    - net_settle (loop through banks and call interbank_settle method)
+
 
 ## 24 September
 

@@ -1,10 +1,15 @@
 <measurement identifier='test_output'>
     <parameter type='filename' value='measurements/TestMeasurement.csv'></parameter>
     <parameter type='output' column='1' header='Step' value='current_step'></parameter>
-    <parameter type='output' column='2' header='Balance' value='balance' ></parameter>
-    <parameter type='output' column='3' header='B_1' value='b_1' ></parameter>
-    <parameter type='output' column='4' header='B_2' value='b_2' ></parameter>
-    <parameter type='output' column='5' header='B_3' value='b_3' ></parameter>
-    <parameter type='output' column='6' header='B_4' value='b_4' ></parameter>
-    <parameter type='output' column='7' header='B_5' value='b_5' ></parameter>
+    <parameter type='output' column='2' header='Deposit Balance' value='dep_balance' ></parameter>
+    <parameter type='output' column='3' header='B_0' value='bank_0' ></parameter>
+    <parameter type='output' column='4' header='B_1' value='bank_1' ></parameter>
+    <parameter type='output' column='5' header='B_2' value='bank_2' ></parameter>
+    <parameter type='output' column='6' header='B_3' value='bank_3' ></parameter>
+    <parameter type='output' column='7' header='B_4' value='bank_4' ></parameter>
+    <parameter type='output' column='8' header='Total_Payments' value='total_payments' ></parameter>
+    <parameter type='output' column='9' header='CBDC Balance' value='cbdc_balance' ></parameter>
+    <parameter type='output' column='10' header='Batch Balance' value='total_batch' ></parameter>
+    <parameter type='output' column='11' header='CBDC_Payments' value='cbdc_payments' ></parameter>
+    <parameter type='output' column='12' header='Deposits_Payments' value='deposits_payments' ></parameter>
 </measurement>

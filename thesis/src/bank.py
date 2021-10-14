@@ -20,6 +20,7 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
+#from _typeshed import OpenTextModeUpdating
 import logging
 from abm_template.src.baseagent import BaseAgent
 
@@ -166,37 +167,165 @@ class Bank(BaseAgent):
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
-    # balance
-    # net payments and receipts
-    # returns balance
+    # bank_initialize_household
+    # household randomly choices proportion of endowment held in bank deposits
+    # and proportion held in CBDC
     # -------------------------------------------------------------------------
-    def balance(self):
-        # Initialize balance with deposits from households first with regards to
-        # the cash
-        assets = self.get_account("deposits")
-        # Then with regards to the liabilities
-        liabilities = self.get_account("deposits")
-        # Loop through all transactions in accounts
+    def bank_initialize_household(self, environment, loan_tranx):
+        # Create loan agreement with household
+        environment.new_transaction(type_="loan_endow", asset='', from_= loan_tranx["from_"], to = loan_tranx["bank_from"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        # Open deposit account for household at bank
+        environment.new_transaction(type_="deposits_endow", asset='', from_= loan_tranx["from_"], to = loan_tranx["bank_from"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+    # -------------------------------------------------------------------------
+
+
+    # -------------------------------------------------------------------------
+    # bank_asset_allocation
+    # bank determines reserves from number of households and loan amounts
+    # calls Central Bank method to initialize reserves and Open Market 
+    # Transactions to balance assets and liabilities
+    # -------------------------------------------------------------------------
+    def bank_asset_allocation(self, environment):
+        # Create reserves
+        reserves_required = (0.5 * 24 * len(environment.households))/len(environment.banks)
+        reserves_allocation = {"type_": "reserves_required", "from_": self.identifier, "to": "central_bank", "amount": reserves_required}
+        environment.get_agent_by_id("central_bank").central_bank_initialize_bank(environment, reserves_allocation)
+        print("{} has {} reserves, and {} Open Market Transactions").format(self.identifier, reserves_required, reserves_required)
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # balance
+    # net payments and receipts, returns balance
+    # -------------------------------------------------------------------------
+    def balance(self, type_):
+        # Determine Endowments
+        loans = self.get_account("loan_endow")
+        deposits = self.get_account("deposits_endow")
+        reserves = self.get_account("reserves_required")
+        omt = self.get_account("omt_endow")
+        batch = 0
+        # Determine value of batched payments
+        for tranx in self.store:
+                batch += tranx["amount"]
+        # Track Changes for different asset classes
         for tranx in self.accounts:
-            # Set transaction variable
-            type_ = tranx.type_
-            from_ = tranx.from_.identifier
-            # If type is receipt then amount is being sent to another bank or 
-            # from storage to another households deposits account thus it reduces
-            # balance
-            if type_ == "settle":
-                if from_ == self.identifier:
-                    assets -= tranx.amount
-                    liabilities -= tranx.amount
-                elif from_ != self.identifier:
-                    assets += tranx.amount
-                    liabilities += tranx.amount
-        print("{}s assets are {}f").format(self.identifier, assets)
-        if assets == liabilities:
-            balance = "True"
-        elif assets != liabilities:
-            balance = "False"
-        return {"balance":balance, "assets":assets}
+            if tranx.from_.identifier == self.identifier:
+                if tranx.type_ == "deposits":
+                   deposits += tranx.amount
+                elif tranx.type_ == "loans":
+                   loans += tranx.amount
+                elif tranx.type_ == "reserves":
+                   reserves -= tranx.amount
+                elif tranx.type_ == "omt":
+                   omt -= tranx.amount
+            elif tranx.from_.identifier != self.identifier:
+                if tranx.type_ == "deposits":
+                   deposits -= tranx.amount
+                elif tranx.type_ == "loans":
+                   loans -= tranx.amount
+                elif tranx.type_ == "reserves":
+                   reserves += tranx.amount
+                elif tranx.type_ == "omt":
+                   omt += tranx.amount
+        # Return Requested Balance
+        if type_ == "deposits":
+            return deposits #- batch
+        elif type_ == "loans":
+            return loans
+        elif type_ == "reserves":
+            return reserves
+        elif type_ == "omt":
+            return omt
+        elif type_ == "assets":
+            return (reserves + loans)
+        elif type_ == "liabilities":
+            return (omt + deposits + batch)
+        elif type_ == "batch":
+            return batch
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # make_payment
+    # takes in transaction details from household and makes payment
+    # -------------------------------------------------------------------------
+    def make_payment(self, environment, tranx, time):
+        # Store transaction for settling
+        self.store.append(tranx)
+		# Transfer funds from bank to household
+        environment.new_transaction(type_="deposits", asset='', from_=tranx["from_"], to=tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+		# We print the action of transferring deposits to batch
+        print("{}s paid {}f to {}s for {}s at time {}d.").format(tranx["from_"], tranx["amount"], tranx["bank_from"], tranx["to"], tranx["time"])
+        #logging.info("  payments made on step: %s",  time)
+    # -------------------------------------------------------------------------
+
+
+    # -------------------------------------------------------------------------
+    # settle_payment
+    # takes in transaction details from bank and makes payment to household
+    # -------------------------------------------------------------------------
+    def settle_payment(self, environment, tranx, time):
+        # Take in transaction details and transfer amount to deposits of household
+        environment.new_transaction(type_="deposits", asset='', from_= self.identifier, to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        print("{}s settled payment of {}f to {}s at time {}d.".format(tranx["bank_to"], tranx["amount"], tranx["to"], time))
+    # -------------------------------------------------------------------------
+
+
+    # -------------------------------------------------------------------------
+    # interbank_settle(environment, time)
+    # This function settles the transactions following the shock. If from and 
+    # to are at the same bank then transaction is settled. If different banks
+    # then only every fourth period is settled.
+    # -------------------------------------------------------------------------
+    def interbank_settle(self,  environment, time):
+        # Settle payments by with banks
+        # Iterate through stored transactions
+        for tranx in self.store[:]:
+			# Settlement of funds between customers of bank each period
+            if (tranx["bank_from"] == tranx["bank_to"]):
+				# Transfer receipt from bank to household
+                environment.new_transaction(type_="deposits", asset='', from_= tranx["bank_from"], to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+				# Remove stored transaction
+                self.store.remove(tranx)
+				# Print details of transaction
+                print("{}s transferred deposits of {}f to {}s at time {}d.".format(tranx["bank_from"], tranx["amount"], tranx["to"], time))
+			
+			# Batch payments for transactions between customers of bank with households
+            # that are customers of different bank and settle every fourth period
+            elif (time % environment.batch == 0):
+				# Transfer reserves to bank of payment recipient
+                environment.new_transaction(type_="reserves", asset='', from_= tranx["bank_from"], to = "central_bank", amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+                # Call method at central bank to continue transaction
+                environment.get_agent_by_id("central_bank").rgts_payment(environment, tranx, time)
+				# Remove stored transaction
+                self.store.remove(tranx)
+				# Print details of transaction
+                print("{}s RTGSed reserves of {}f  to {}s at time {}d.".format(tranx["bank_from"], tranx["amount"], "central_bank", time))
+		# Print number of stored transactions
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # cbdc_purchase
+    # Household exchanges deposits at bank for cbdc at central bank
+    # -------------------------------------------------------------------------
+    def cbdc_purchase(self, environment, tranx, time):
+        # Decrease Deposits for household
+        environment.new_transaction(type_="deposits", asset='', from_=tranx["from_"], to=tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        # Call Central Bank method to transfer Reserves to Central Bank, CBDC to Household, Open Market
+        # Transactions to Bank and Reserves to Bank
+        environment.get_agent_by_id("central_bank").cbdc_settle(environment, tranx, time)
+    # -------------------------------------------------------------------------
+
+
+    # -------------------------------------------------------------------------
+    # bank_notes_purchase
+    # Household exchanges deposits at bank for cbdc at central bank
+    # -------------------------------------------------------------------------
+    def bank_notes_purchase(self, environment, tranx, time):
+        # Decrease Deposits for household
+        environment.new_transaction(type_="deposits", asset='', from_=tranx["from_"], to=tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        # Call Central Bank method to transfer Reserves to Central Bank, Bank Notes to Household, Open Market
+        # Transactions to Bank and Reserves to Bank
+        environment.get_agent_by_id("central_bank").bank_notes_settle(environment, tranx, time)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -206,9 +335,9 @@ class Bank(BaseAgent):
     # controlled by the lists below
     # -------------------------------------------------------------------------
     def check_consistency(self):
-        assets = ["loans", "cash"]
-        liabilities = ["deposits", "payment"]
-        return super(Bank, self).check_consistency(assets, liabilities)
+        assets = round(self.balance("assets"), 0)
+        liabilities = round(self.balance("liabilities"), 0)
+        return (assets == liabilities)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
