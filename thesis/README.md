@@ -2,7 +2,11 @@
 
 ## How to run code
 
-- Open thesis_example.ipynb and run all. Errors should relate to libraries that are not installed.
+- Access repo in command line or terminal
+- Open Jupyter Notebook
+- Open thesis_example.ipynb
+- Change kernel to venv
+- Run all.
 
 
 ## Description of Code
