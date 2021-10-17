@@ -190,7 +190,7 @@ class Bank(BaseAgent):
         reserves_required = (0.5 * 24 * len(environment.households))/len(environment.banks)
         reserves_allocation = {"type_": "reserves_required", "from_": self.identifier, "to": "central_bank", "amount": reserves_required}
         environment.get_agent_by_id("central_bank").central_bank_initialize_bank(environment, reserves_allocation)
-        print("{} has {} reserves, and {} Open Market Transactions").format(self.identifier, reserves_required, reserves_required)
+        print(f"{self.identifier} has {reserves_required} reserves, and {reserves_required} Open Market Transactions")
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -254,7 +254,7 @@ class Bank(BaseAgent):
 		# Transfer funds from bank to household
         environment.new_transaction(type_="deposits", asset='', from_=tranx["from_"], to=tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
 		# We print the action of transferring deposits to batch
-        print("{}s paid {}f to {}s for {}s at time {}d.").format(tranx["from_"], tranx["amount"], tranx["bank_from"], tranx["to"], tranx["time"])
+        print(f"{tranx['from_']}s paid {tranx['amount']} to {tranx['bank_from']} for {tranx['to']} at time {tranx['time']}.")
         #logging.info("  payments made on step: %s",  time)
     # -------------------------------------------------------------------------
 
@@ -266,7 +266,7 @@ class Bank(BaseAgent):
     def settle_payment(self, environment, tranx, time):
         # Take in transaction details and transfer amount to deposits of household
         environment.new_transaction(type_="deposits", asset='', from_= self.identifier, to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        print("{}s settled payment of {}f to {}s at time {}d.".format(tranx["bank_to"], tranx["amount"], tranx["to"], time))
+        print(f"{tranx['bank_to']} settled payment of {tranx['amount']} to {tranx['to']} at time {time}.")
     # -------------------------------------------------------------------------
 
 
@@ -287,7 +287,7 @@ class Bank(BaseAgent):
 				# Remove stored transaction
                 self.store.remove(tranx)
 				# Print details of transaction
-                print("{}s transferred deposits of {}f to {}s at time {}d.".format(tranx["bank_from"], tranx["amount"], tranx["to"], time))
+                print(f"{tranx['bank_from']}s transferred deposits of {tranx['amount']}f to {tranx['to']}s at time {time}d.")
 			
 			# Batch payments for transactions between customers of bank with households
             # that are customers of different bank and settle every fourth period
@@ -299,7 +299,7 @@ class Bank(BaseAgent):
 				# Remove stored transaction
                 self.store.remove(tranx)
 				# Print details of transaction
-                print("{}s RTGSed reserves of {}f  to {}s at time {}d.".format(tranx["bank_from"], tranx["amount"], "central_bank", time))
+                print(f"{tranx['bank_from']}s RTGSed reserves of {tranx['amount']}f  to {'central_bank'}s at time {time}d.")
 		# Print number of stored transactions
     # -------------------------------------------------------------------------
 

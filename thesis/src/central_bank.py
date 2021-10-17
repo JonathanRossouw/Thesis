@@ -134,8 +134,8 @@ class CentralBank(BaseAgent):
         # Transfer funds from central bank to household
         environment.new_transaction(type_="cbdc", asset='', from_="central_bank", to=tranx["to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
 		# We print the action of selling to the screen
-        print("{}s paid {}f of cbdc to {}s for {}s at time {}d.").format(tranx["from_"], tranx["amount"], "central_bank", tranx["to"], tranx["time"])
-        print("{}s settled {}f of cbdc to {}s at time {}d.").format("central_bank", tranx["amount"], tranx["to"], tranx["to"], tranx["time"])
+        print(f"{tranx['from_']}s paid {tranx['amount']}f of cbdc to {'central_bank'}s for {tranx['to']}s at time {tranx['time']}d.")
+        print(f"{'central_bank'}s settled {tranx['amount']}f of cbdc to {tranx['to']}s at time {tranx['time']}d.")
         #logging.info("  payments made on step: %s",  time)
     # -------------------------------------------------------------------------
 
@@ -149,8 +149,8 @@ class CentralBank(BaseAgent):
         # Transfer funds from central bank to household
         environment.new_transaction(type_="bank_notes", asset='', from_="central_bank", to=tranx["to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
 		# We print the action of selling to the screen
-        print("{}s paid {}f of cbdc to {}s for {}s at time {}d.").format(tranx["from_"], tranx["amount"], "central_bank", tranx["to"], tranx["time"])
-        print("{}s settled {}f of cbdc to {}s at time {}d.").format("central_bank", tranx["amount"], tranx["to"], tranx["to"], tranx["time"])
+        print(f"{tranx['from_']}s paid {tranx['amount']}f of cbdc to {self.identifier}s for {tranx['to']}s at time {tranx['time']}d.")
+        print(f"{self.identifier}s settled {tranx['amount']}f of cbdc to {tranx['to']}s at time {tranx['time']}d.")
         #logging.info("  payments made on step: %s",  time)
     # -------------------------------------------------------------------------
 
@@ -162,7 +162,7 @@ class CentralBank(BaseAgent):
 		# Transfer funds from central bank to bank
         environment.new_transaction(type_="reserves", asset='', from_=self.identifier, to=tranx["bank_to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         environment.get_agent_by_id(tranx["bank_to"]).settle_payment(environment, tranx, time)
-        print("{} RTGSed {} of reserves to {} at time {}d.").format(self.identifier, tranx["amount"], tranx["bank_to"],tranx["time"])
+        print(f"{self.identifier} RTGSed {tranx['amount']} of reserves to {tranx['bank_to']} at time {tranx['time']}d.")
         #logging.info("  payments made on step: %s",  time)
     # -------------------------------------------------------------------------
 
@@ -226,7 +226,7 @@ class CentralBank(BaseAgent):
         environment.new_transaction(type_="omt", asset='', from_="central_bank", to=tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         # Increase Bank Reserves equal to increase Open Market Transactions agreement
         environment.new_transaction(type_="reserves", asset='', from_= "central_bank", to= tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        print("CBDC settlement of {} to {} complete").format(tranx["from_"], tranx["amount"])
+        print(f"CBDC settlement of {tranx['from_']} to {tranx['amount']} complete")
     # -------------------------------------------------------------------------
 
 
@@ -243,7 +243,7 @@ class CentralBank(BaseAgent):
         environment.new_transaction(type_="omt", asset='', from_="central_bank", to=tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         # Increase Bank Reserves equal to increase Open Market Transactions agreement
         environment.new_transaction(type_="reserves", asset='', from_= "central_bank", to= tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        print("Bank Notes settlement of {} to {} complete").format(tranx["from_"], tranx["amount"])
+        print(f"Bank Notes settlement of {tranx['from_']} to {tranx['amount']} complete")
     # -------------------------------------------------------------------------
 
 

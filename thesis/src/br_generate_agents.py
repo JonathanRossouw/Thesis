@@ -76,8 +76,8 @@ class Generate_Agents:
 			# this code is ugly, but works...
 			householdfileName += ".xml"
 			outFile = open(householdfileName,  'w')
-			
-			text = "<household identifier= 'household_" + str(i) + "_" + str(bank_acc) + "'>\n"
+			text = "<?xml version='1.0' encoding='UTF-8'?>\n"
+			text = text + "<household identifier= 'household_" + str(i) + "_" + str(bank_acc) + "'>\n"
 			text = text + "    <parameter name='endowment' value='24.00'></parameter>\n"
 			text = text + "    <parameter name='propensity_to_save' value='0.4'></parameter>\n"
 			text = text + "    <transaction type='deposits' asset='' from='bank_" + str(bank_acc) + "' to='household_" + str(i) + "' amount='24' interest='0.00' maturity='0' time_of_default='-1'></transaction>\n"
@@ -106,8 +106,9 @@ class Generate_Agents:
 			# this code is ugly, but works...
 			bankfileName += ".xml"
 			outFile = open(bankfileName,  'w')
-			
-			text = "<bank identifier= 'bank_" + str(i) + "'>\n"
+
+			text = "<?xml version='1.0' encoding='UTF-8'?> \n"
+			text = text + "<bank identifier= 'bank_" + str(i) + "'>\n"
 			text = text + "    <parameter type='static' name='interest_rate_loans' value='0.00'></parameter>\n"
 			text = text + "    <parameter type='static' name='interest_rate_deposits' value='0.00'></parameter>\n"
 			text = text + "    <transaction type='deposits' asset='' from='household_test_config_id' to='bank_test_config_id' amount='0' interest='0.00' maturity='0' time_of_default='-1'></transaction>\n"

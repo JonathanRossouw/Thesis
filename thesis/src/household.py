@@ -190,7 +190,7 @@ class Household(BaseAgent):
         # Create Bank_notes at Central Bank
         bank_notes_allocation = {"type_": "deposits", "from_" : self.identifier, "bank_from": self.bank_acc, "to" : "central_bank", "bank_to" : "central_bank", "amount" : bank_notes, "time" : time}
         environment.get_agent_by_id(self.bank_acc).bank_notes_purchase(environment, bank_notes_allocation, time)
-        print("{} chose {} deposits, {} cbdc, and {} bank_notes").format(self.identifier, deposits, cbdc, bank_notes)
+        print(f"{self.identifier} chose {deposits} deposits, {cbdc} cbdc, and {bank_notes} bank_notes")
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -255,10 +255,10 @@ class Household(BaseAgent):
         import random
         G = nx.get_node_attributes(environment.network, "id")
         # Get key corresponding to household making payment
-        from_id = G.values().index(self.identifier)
+        from_id = list(G.values()).index(self.identifier)
         # Select random edge from household making payments edges
         if len(environment.network.edges(from_id)) > 0:
-            to_id = random.sample(environment.network.edges(from_id), 1)
+            to_id = random.sample(list(environment.network.edges(from_id)), 1)
             # Determine the key value of the other household along edge
             to_index = to_id[0][1]
             # Get household identifier corresponding edge
@@ -348,9 +348,6 @@ class Household(BaseAgent):
                             environment.get_agent_by_id("central_bank").make_bank_notes_payment(environment, tranx_bank_notes, time)
                             # Record total payment value
                             environment.total_payments += payment
-
-                    
-                
 
     # -------------------------------------------------------------------------
 
