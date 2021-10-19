@@ -106,8 +106,8 @@ class Firm(BaseAgent):
         # CONVERSELY, IF YOU WANT TO READ THE VALUE, DON'T USE THE FULL NAMES
         # INSTEAD USE __getattr__ POWER TO CHANGE THE COMMAND FROM
         # instance.static_parameters["xyz"] TO instance.xyz - THE LATTER IS PREFERRED
-        self.parameters["productivity"] = 0.0  # how many units of goods do we get from 1 unit of labour
-        self.parameters["active"] = 0  # this is a control parameter checking whether firm is active
+        #self.parameters["productivity"] = 0.0  # how many units of goods do we get from 1 unit of labour
+        #self.parameters["active"] = 0  # this is a control parameter checking whether firm is active
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -157,7 +157,7 @@ class Firm(BaseAgent):
                 value = subelement.attrib['value']
                 # add them to parameter list
                 if name == "bank_acc":
-                    self.parameters[name] = value
+                    self.parameters[name] = str(value)
                 else:
                     self.parameters[name] = float(value)
 
@@ -167,6 +167,190 @@ class Firm(BaseAgent):
     # ------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
+    # firm_asset_allocation
+    # firm choices proportion of endowment held in bank deposits
+    # and proportion held in CBDC
+    # -------------------------------------------------------------------------
+    def firm_asset_allocation(self, environment, time):
+        import random
+        # Create Loan Account at Bank
+        loan_tranx = {"type_": "loan_endow", "from_" : self.identifier, "bank_from": self.bank_acc, "to" : self.identifier, "bank_to" : self.bank_acc, "amount" : self.endowment, "time" : time}
+        environment.get_agent_by_id(self.bank_acc).bank_initialize_firm(environment, loan_tranx)
+        # Decide on asset allocation
+        # Decide on Deposits
+        deposits = self.endowment * 2/3# random.uniform(0.4, 0.8)   #### Use this to set asset allowcation to only deposits
+        # Decide on CBDC
+        cbdc = (self.endowment - deposits) #* random.uniform(0.5, 1)  #### Use this to set asset allowcation to only CBDC
+        # Remainder to bank_notes
+        bank_notes = (self.endowment - deposits - cbdc)
+        # Purchase CBDC from Deposits at Bank with Central Bank
+        cbdc_allocation = {"type_": "deposits", "from_" : self.identifier, "bank_from": self.bank_acc, "to" : "central_bank", "bank_to" : "central_bank", "amount" : cbdc, "time" : time}
+        environment.get_agent_by_id(self.bank_acc).cbdc_purchase(environment, cbdc_allocation, time)
+        # Create Bank_notes at Central Bank
+        bank_notes_allocation = {"type_": "deposits", "from_" : self.identifier, "bank_from": self.bank_acc, "to" : "central_bank", "bank_to" : "central_bank", "amount" : bank_notes, "time" : time}
+        environment.get_agent_by_id(self.bank_acc).bank_notes_purchase(environment, bank_notes_allocation, time)
+        print(f"{self.identifier} chose {deposits} deposits, {cbdc} cbdc, and {bank_notes} bank_notes")
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # balance
+    # net payments and receipts, returns balance
+    # -------------------------------------------------------------------------
+    def balance(self, type_):
+        # Determine Endowments
+        labour = 0
+        wages = 0
+        output = 0
+        loans = self.get_account("loan_endow")
+        deposits = self.get_account("deposits_endow")
+        cbdc = self.get_account("cbdc_endow")
+        bank_notes = self.get_account("bank_notes_endow")
+        # Track Changes for different asset classes
+        for tranx in self.accounts:
+            # Transaction from firm decrease balance
+            if tranx.from_.identifier == self.identifier:
+                if tranx.type_ == "deposits":
+                   deposits -= tranx.amount
+                elif tranx.type_ == "loans":
+                   loans -= tranx.amount
+                elif tranx.type_ == "cbdc":
+                   cbdc -= tranx.amount
+                elif tranx.type_ == "bank_notes":
+                   bank_notes -= tranx.amount
+
+                elif tranx.type_ == "labour":
+                    labour -= tranx.amount
+                elif tranx.type_ == "wages":
+                    wages += tranx.amount
+                elif tranx.type_ == "output":
+                    output += tranx.amount
+
+            # Transactions to firm increase balance
+            elif tranx.from_.identifier != self.identifier:
+                if tranx.type_ == "deposits":
+                   deposits += tranx.amount
+                elif tranx.type_ == "loans":
+                   loans += tranx.amount
+                elif tranx.type_ == "cbdc":
+                   cbdc += tranx.amount
+                elif tranx.type_ == "bank_notes":
+                   bank_notes += tranx.amount
+
+                elif tranx.type_ == "labour":
+                    labour += tranx.amount
+                elif tranx.type_ == "wages":
+                    wages -= tranx.amount
+                elif tranx.type_ == "output":
+                    output -= tranx.amount
+        # Return Requested Balance
+        if type_ == "deposits":
+            return deposits
+        elif type_ == "loans":
+            return loans
+        elif type_ == "cbdc":
+            return cbdc
+        elif type_ == "bank_notes":
+            return bank_notes
+        elif type_ == "labour":
+            return labour
+        elif type_ == "wages":
+            return wages
+        elif type_ == "output":
+            return output
+        elif type_ == "assets":
+            return (deposits + cbdc + bank_notes + wages)
+        elif type_ == "liabilities":
+            return (loans + output)
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # get_households
+    # create list of household identifiers for households that work at firm
+    # -------------------------------------------------------------------------
+    def get_households(self, environment):
+        households = []
+        import networkx as nx
+        G = environment.network
+        # Loop through nodes in the network
+        for u, dat in G.nodes(data=True):
+        # Loop through all households
+            # If household is customer append to list
+            if environment.get_agent_by_id(dat["id"]).firm_acc == self.identifier:
+                households.append(dat["id"])
+        return households
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # production
+    # placeholder for a function determining production size of a firm
+    # -------------------------------------------------------------------------
+    def production(self, environment, time):
+        households = self.get_households(environment)
+        labour = self.balance("labour")
+        capital = self.balance("deposits")
+        wage = 1
+        loan = wage * labour
+        alpha = 1/capital
+        beta = 1
+        gamma = 1
+        price = 1
+        # Take out loan
+        loan_tranx = {"type_": "loans", "from_" : self.identifier, "bank_from": self.bank_acc, "to" : self.identifier, "bank_to" : self.bank_acc, "amount" : loan, "time" : time}
+        environment.get_agent_by_id(self.bank_acc).new_loan(environment, loan_tranx)
+
+        # Create wage agreement and pay for wages
+        for id_ in households:
+            house = environment.get_agent_by_id(id_)
+            # Create Agreement
+            wages = (wage * labour)/len(households)
+            wage_tranx = {"type_": "wages", "from_" : self.identifier, "bank_from": self.bank_acc, "to" : house.identifier, "bank_to" : house.bank_acc, "amount" : wages, "time" : time}
+            environment.new_transaction(type_="wages", asset='', from_= wage_tranx["from_"], to = wage_tranx["to"], amount = wage_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+
+            # Pay for Wages with deposits
+            wage_tranx["type_"] = "deposits"
+            environment.get_agent_by_id(self.bank_acc).make_payment(environment, wage_tranx, time)
+            print(f"{wages} wages paid to {house.identifier}")
+
+        # Produce Output
+
+        output = round(alpha * (labour ** beta) * (capital ** gamma), 5)
+        environment.total_output += output
+
+        # Create output agreement and sell output
+        for id_ in households:
+            house = environment.get_agent_by_id(id_)
+            # Create Output agreement and 
+            out = (price * output)/len(households)
+            out_tranx = {"type_": "output", "from_" : self.identifier, "bank_from": self.bank_acc, "to" : house.identifier, "bank_to" : house.bank_acc, "amount" : out, "time" : time}
+            environment.new_transaction(type_="output", asset='', from_= out_tranx["from_"], to = out_tranx["to"], amount = out_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+            # Sell output for deposits
+            sell_tranx = {"type_": "deposits", "from_" : house.identifier, "bank_from": house.bank_acc, "to" : self.identifier, "bank_to" : self.bank_acc, "amount" : out, "time" : time}
+            house.deposits_payment(environment, sell_tranx, time)
+            print(f"{out} output sold to {house.identifier}")
+
+        # Repay Loan
+        environment.get_agent_by_id(self.bank_acc).repay_loan(environment, loan_tranx)
+
+        # Households consume output and agreements are settled
+
+        for id_ in households:
+            house = environment.get_agent_by_id(id_)
+            # Settle Labour Agreement
+            lab = (labour)/len(households)
+            lab_tranx = {"type_": "labour", "from_" : self.identifier, "to" : house.identifier, "amount" : lab, "time" : time}
+            environment.new_transaction(type_="labour", asset='', from_= lab_tranx["from_"], to = lab_tranx["to"], amount = lab_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+            # Settle wage agreements
+            wages = (wage * labour)/len(households)
+            wage_tranx = {"type_": "wages", "from_" : self.identifier, "bank_from": self.bank_acc, "to" : house.identifier, "bank_to" : house.bank_acc, "amount" : wages, "time" : time}
+            environment.new_transaction(type_="wages", asset='', from_= wage_tranx["to"], to = wage_tranx["from_"], amount = wage_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+            # Settle output agreements
+            out = (price * output)/len(households)
+            out_tranx = {"type_": "output", "from_" : self.identifier, "bank_from": self.bank_acc, "to" : house.identifier, "bank_to" : house.bank_acc, "amount" : out, "time" : time}
+            environment.new_transaction(type_="output", asset='', from_= out_tranx["to"], to = out_tranx["from_"], amount = out_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+    # -------------------------------------------------------------------------
+
+
+    # -------------------------------------------------------------------------
     # get_new_investments
     # placeholder for a function determining production size of a firm
     # -------------------------------------------------------------------------
@@ -174,17 +358,16 @@ class Firm(BaseAgent):
         pass
     # -------------------------------------------------------------------------
 
-    # -------------------------------------------------------------------------
+# -------------------------------------------------------------------------
     # check_consistency
     # checks whether the assets and liabilities have the same total value
     # the types of transactions that make up assets and liabilities is
     # controlled by the lists below
-    # NOT IMPLEMENTED FOR FIRM YET, NEED TO FILL assets & liabilities
     # -------------------------------------------------------------------------
     def check_consistency(self):
-        assets = []
-        liabilities = []
-        return super(Firm, self).check_consistency(assets, liabilities)
+        assets = round(self.balance("assets"), 0)
+        liabilities = round(self.balance("liabilities"), 0)
+        return (assets == liabilities)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

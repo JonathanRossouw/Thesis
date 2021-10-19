@@ -42,11 +42,12 @@ class Environment(BaseConfig):
     banks = []  # a list containing all banks (instances of class Bank)
     central_bank = []  # a list containing central bank (instances of class Bank)
     households = []  # a list containing all households (instances of class Household)
-    #firms = []  # a list containing all firms (instances of class Firm)
+    firms = []  # a list containing all firms (instances of class Firm)
     agents = []
     deposits_payments = 0 # Total payments made with Deposits
     cbdc_payments = 0 # Total payments made with CBDC
     total_payments = 0 # Measurement of total activity
+    total_output = 0 # Measurement of total output
 
     # Frequency of batching
     batch = 0
@@ -66,14 +67,14 @@ class Environment(BaseConfig):
     static_parameters["num_sweeps"] = 0  # numbers of runs in a single simulation
 
     static_parameters["num_banks"] = 0  # number of banks in a simulation
-    #static_parameters["num_firms"] = 0  # number of firms in a simulation
+    static_parameters["num_firms"] = 0  # number of firms in a simulation
     static_parameters["num_households"] = 0  # number of households in a simulation
     static_parameters["num_central_bank"] = 0  # number of central banks in a simulation
 
     static_parameters["batch"] = 0 # Frequency of batching
 
     static_parameters["bank_directory"] = ""  # directory containing bank config files
-    #static_parameters["firm_directory"] = ""  # directory containing firm config files
+    static_parameters["firm_directory"] = ""  # directory containing firm config files
     static_parameters["household_directory"] = ""  # directory containing household config files
     static_parameters["central_bank_directory"] = ""  # directory containing central bank config files
 
@@ -176,7 +177,7 @@ class Environment(BaseConfig):
     # returns an agent based on the id
     # -------------------------------------------------------------------------
     def get_agent_by_id(self, ident):
-        # self.agents = [self.banks, self.firms, self.households]
+        #self.agents = [self.banks, self.firms, self.households]
         return super(Environment, self).get_agent_by_id(ident)
     # -------------------------------------------------------------------------
 
@@ -253,11 +254,11 @@ class Environment(BaseConfig):
         self.static_parameters["num_sweeps"] = 0
         self.static_parameters["num_banks"] = 0
         self.static_parameters["num_central_bank"] = 0
-        #self.static_parameters["num_firms"] = 0
+        self.static_parameters["num_firms"] = 0
         self.static_parameters["num_households"] = 0
         self.static_parameters["bank_directory"] = ""
         self.static_parameters["central_bank_directory"] = ""
-        #self.static_parameters["firm_directory"] = ""
+        self.static_parameters["firm_directory"] = ""
         self.static_parameters["household_directory"] = ""
         self.static_parameters["batch"] = 0
         self.variable_parameters = {}
@@ -286,12 +287,12 @@ class Environment(BaseConfig):
             logging.error("ERROR: no central_bank_directory given in %s\n",  environment_filename)
 
         # then read in all the firms
-        # if self.firm_directory != "":
-        #     if self.firm_directory != "none":  # none is used for tests only
-        #         self.initialize_firms_from_files(self.firm_directory)
-        #         logging.info("  firms read from directory: %s",  self.firm_directory)
-        # else:
-        #     logging.error("ERROR: no firm_directory given in %s\n",  environment_filename)
+        if self.firm_directory != "":
+            if self.firm_directory != "none":  # none is used for tests only
+                self.initialize_firms_from_files(self.firm_directory)
+                logging.info("  firms read from directory: %s",  self.firm_directory)
+        else:
+            logging.error("ERROR: no firm_directory given in %s\n",  environment_filename)
 
         # then read in all the households
         if self.household_directory != "":
@@ -302,7 +303,7 @@ class Environment(BaseConfig):
             logging.error("ERROR: no household_directory given in %s\n",  environment_filename)
 
         # add agents to the list of all agents
-        self.agents = [self.banks, self.households, self.central_bank]
+        self.agents = [self.banks, self.households, self.firms, self.central_bank]
 
         # then, initialize transactions from the config files for banks
         if self.bank_directory != "":
@@ -321,12 +322,12 @@ class Environment(BaseConfig):
             logging.error("ERROR: no central_bank_directory given in %s\n",  environment_filename)
 
         # then, initialize transactions from the config files for firms
-        # if self.firm_directory != "":
-        #     if self.firm_directory != "none":  # none is used for tests only
-        #         self.read_transactions_for_firms(self.firm_directory)
-        #         logging.info("  firms' transactions read from directory: %s",  self.firm_directory)
-        # else:
-        #     logging.error("ERROR: no firm_directory given in %s\n",  environment_filename)
+        if self.firm_directory != "":
+            if self.firm_directory != "none":  # none is used for tests only
+                self.read_transactions_for_firms(self.firm_directory)
+                logging.info("  firms' transactions read from directory: %s",  self.firm_directory)
+        else:
+            logging.error("ERROR: no firm_directory given in %s\n",  environment_filename)
 
         # then, initialize transactions from the config files for households
         if self.household_directory != "":
@@ -345,6 +346,11 @@ class Environment(BaseConfig):
         # Initialize households that are customers of banks
         for banx in self.banks:
             banx.get_households(self)
+
+        for house in self.households:
+            for firm in self.firms:
+                if house.firm_acc[-2:] == firm.identifier[4:6]:
+                    house.firm_acc = firm.identifier
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -406,23 +412,23 @@ class Environment(BaseConfig):
     # this reads all config files in the provided directory and
     # initializes firms with the contents of these configs
     # -------------------------------------------------------------------------
-    # def initialize_firms_from_files(self,  firm_directory):
-    #     from src.firm import Firm
-    #     # this routine is called more than once, so we have to reset the list of firms each time
-    #     while len(self.firms) > 0:
-    #         self.firms.pop()
-    #     # we list all the files in the specified directory
-    #     listing = os.listdir(firm_directory)
-    #     # and check if the number of files is in line with the parameters
-    #     if (len(listing) != self.num_firms):
-    #         logging.error("    ERROR: number of configuration files in %s (=%s) does not match num_firms (=%s)",
-    #                       firm_directory,  str(len(listing)), str(self.num_firms))
-    #     # we read the files sequentially
-    #     for infile in listing:
-    #         firm = Firm()
-    #         firm.get_parameters_from_file(firm_directory + infile,  self)
-    #         # and read parameters to the firms, only to add them to the environment
-    #         self.firms.append(firm)
+    def initialize_firms_from_files(self,  firm_directory):
+        from src.firm import Firm
+        # this routine is called more than once, so we have to reset the list of firms each time
+        while len(self.firms) > 0:
+            self.firms.pop()
+        # we list all the files in the specified directory
+        listing = os.listdir(firm_directory)
+        # and check if the number of files is in line with the parameters
+        if (len(listing) != self.num_firms):
+            logging.error("    ERROR: number of configuration files in %s (=%s) does not match num_firms (=%s)",
+                          firm_directory,  str(len(listing)), str(self.num_firms))
+        # we read the files sequentially
+        for infile in listing:
+            firm = Firm()
+            firm.get_parameters_from_file(firm_directory + infile,  self)
+            # and read parameters to the firms, only to add them to the environment
+            self.firms.append(firm)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -523,24 +529,24 @@ class Environment(BaseConfig):
     # read_transactions_for_firms
     # reads transactions for firms from the config files
     # -------------------------------------------------------------------------
-    # def read_transactions_for_firms(self,  firm_directory):
-    #     from xml.etree import ElementTree
-    #     # we list all the files in the specified directory
-    #     listing = os.listdir(firm_directory)
-    #     # and check if the number of files is in line with the parameters
-    #     if (len(listing) != self.num_firms):
-    #         logging.error("    ERROR: number of configuration files in %s (=%s) does not match num_firms (=%s)",
-    #                       firm_directory,  str(len(listing)), str(self.num_firms))
-    #     # we read the files sequentially
-    #     for infile in listing:
-    #         # we open the file and find the identifier of the config
-    #         xmlText = open(firm_directory + infile).read()
-    #         element = ElementTree.XML(xmlText)
-    #         identifier = element.attrib['identifier']
-    #         # and we find the firm with this identifier
-    #         firm = self.get_agent_by_id(identifier)
-    #         # then we read the transactions from the config to the appropriate firm
-    #         firm.get_transactions_from_file(firm_directory + infile, self)
+    def read_transactions_for_firms(self,  firm_directory):
+        from xml.etree import ElementTree
+        # we list all the files in the specified directory
+        listing = os.listdir(firm_directory)
+        # and check if the number of files is in line with the parameters
+        if (len(listing) != self.num_firms):
+            logging.error("    ERROR: number of configuration files in %s (=%s) does not match num_firms (=%s)",
+                          firm_directory,  str(len(listing)), str(self.num_firms))
+        # we read the files sequentially
+        for infile in listing:
+            # we open the file and find the identifier of the config
+            xmlText = open(firm_directory + infile).read()
+            element = ElementTree.XML(xmlText)
+            identifier = element.attrib['identifier']
+            # and we find the firm with this identifier
+            firm = self.get_agent_by_id(identifier)
+            # then we read the transactions from the config to the appropriate firm
+            firm.get_transactions_from_file(firm_directory + infile, self)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

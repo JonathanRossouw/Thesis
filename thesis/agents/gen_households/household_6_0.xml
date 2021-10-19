@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<household identifier= 'household_6_1'>
-    <parameter name='endowment' value='24.00'></parameter>
-    <parameter name='propensity_to_save' value='0.4'></parameter>
-    <transaction type='deposits' asset='' from='bank_1' to='household_6' amount='24' interest='0.00' maturity='0' time_of_default='-1'></transaction>
-    <parameter name='bank_acc' value='bank_1'></parameter>
-</household>

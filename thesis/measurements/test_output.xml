@@ -12,4 +12,5 @@
     <parameter type='output' column='10' header='Batch Balance' value='total_batch' ></parameter>
     <parameter type='output' column='11' header='CBDC_Payments' value='cbdc_payments' ></parameter>
     <parameter type='output' column='12' header='Deposits_Payments' value='deposits_payments' ></parameter>
+    <parameter type='output' column='13' header='Total_Output' value='total_output' ></parameter>
 </measurement>

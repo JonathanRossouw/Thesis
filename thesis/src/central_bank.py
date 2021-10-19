@@ -118,11 +118,9 @@ class CentralBank(BaseAgent):
     def central_bank_initialize_bank(self, environment, tranx):
         # Create reserves for bank
         environment.new_transaction(type_="reserves_required", asset='', from_= tranx["from_"], to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        # Create Open Market Transactions agreement with Bank
-        environment.new_transaction(type_="omt_endow", asset='', from_= tranx["from_"], to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        # Create Open Market Operations agreement with Bank
+        environment.new_transaction(type_="omo_endow", asset='', from_= tranx["from_"], to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
     # -------------------------------------------------------------------------
-
-
 
     # -------------------------------------------------------------------------
     # make_cbdc_payment
@@ -174,7 +172,7 @@ class CentralBank(BaseAgent):
     def balance(self, type_):
         # Determine Endowments
         reserves = self.get_account("reserves_required")
-        omt = self.get_account("omt_endow")
+        omo = self.get_account("omo_endow")
         cbdc = self.get_account("cbdc_endow")
         bank_notes = self.get_account("bank_notes_endow")
         # Track Changes for different asset classes
@@ -182,8 +180,8 @@ class CentralBank(BaseAgent):
             if tranx.from_.identifier == self.identifier:
                 if tranx.type_ == "reserves":
                    reserves += tranx.amount
-                elif tranx.type_ == "omt":
-                   omt += tranx.amount
+                elif tranx.type_ == "omo":
+                   omo += tranx.amount
                 elif tranx.type_ == "cbdc":
                    cbdc += tranx.amount
                 elif tranx.type_ == "bank_notes":
@@ -191,8 +189,8 @@ class CentralBank(BaseAgent):
             elif tranx.from_.identifier != self.identifier:
                 if tranx.type_ == "reserves":
                    reserves -= tranx.amount
-                elif tranx.type_ == "omt":
-                   omt -= tranx.amount
+                elif tranx.type_ == "omo":
+                   omo -= tranx.amount
                 elif tranx.type_ == "cbdc":
                    cbdc -= tranx.amount
                 elif tranx.type_ == "bank_notes":
@@ -200,14 +198,14 @@ class CentralBank(BaseAgent):
         # Return Requested Balance
         if type_ == "reserves":
             return reserves
-        elif type_ == "omt":
-            return omt
+        elif type_ == "omo":
+            return omo
         elif type_ == "cbdc":
             return cbdc
         elif type_ == "bank_notes":
             return bank_notes
         elif type_ == "assets":
-            return (omt)
+            return (omo)
         elif type_ == "liabilities":
             return (reserves + cbdc + bank_notes)
     # -------------------------------------------------------------------------
@@ -222,11 +220,11 @@ class CentralBank(BaseAgent):
         environment.new_transaction(type_="reserves", asset='', from_= tranx["bank_from"], to = "central_bank", amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         # Transfer CBDC to Household
         environment.new_transaction(type_="cbdc", asset='', from_="central_bank", to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        # Transfer Open Market Transactions to Bank
-        environment.new_transaction(type_="omt", asset='', from_="central_bank", to=tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        # Increase Bank Reserves equal to increase Open Market Transactions agreement
+        # Transfer Open Market Operations to Bank
+        environment.new_transaction(type_="omo", asset='', from_="central_bank", to=tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        # Increase Bank Reserves equal to increase Open Market Operations agreement
         environment.new_transaction(type_="reserves", asset='', from_= "central_bank", to= tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        print(f"CBDC settlement of {tranx['from_']} to {tranx['amount']} complete")
+        print(f"CBDC settlement of {tranx['amount']} to {tranx['from_']} complete")
     # -------------------------------------------------------------------------
 
 
@@ -239,11 +237,11 @@ class CentralBank(BaseAgent):
         environment.new_transaction(type_="reserves", asset='', from_= tranx["bank_from"], to = "central_bank", amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         # Transfer Bank Notes to Household
         environment.new_transaction(type_="bank_notes", asset='', from_="central_bank", to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        # Transfer Open Market Transactions to Bank
-        environment.new_transaction(type_="omt", asset='', from_="central_bank", to=tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        # Increase Bank Reserves equal to increase Open Market Transactions agreement
+        # Transfer Open Market Operations to Bank
+        environment.new_transaction(type_="omo", asset='', from_="central_bank", to=tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        # Increase Bank Reserves equal to increase Open Market Operations agreement
         environment.new_transaction(type_="reserves", asset='', from_= "central_bank", to= tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        print(f"Bank Notes settlement of {tranx['from_']} to {tranx['amount']} complete")
+        print(f"Bank Notes settlement of {tranx['amount']} to {tranx['from_']} complete")
     # -------------------------------------------------------------------------
 
 

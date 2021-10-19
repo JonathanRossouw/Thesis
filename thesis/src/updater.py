@@ -87,9 +87,9 @@ class Updater(BaseModel):
         #self.accrue_interests(environment, time)
         # Then agents get their labour endowment for the step (e.g. work hours to spend)
         # For now we don't need to keep track of labour left as there is no queue
-        self.bank_endow_assets(environment, time)
-        self.hh_endow_assets(environment, time)
-        self.payment_shock(environment, time)
+        self.endow_agents(environment, time)
+        self.initiate_production(environment, time)
+        #self.payment_shock(environment, time)
         self.net_settle(environment, time)
         # The households sell labour to firms
         #self.sell_labour(environment, time)
@@ -104,15 +104,41 @@ class Updater(BaseModel):
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
+    # endow_agents
+    # Calls methods for households, firms and banks to allocate endowment
+    # -------------------------------------------------------------------------
+    def endow_agents(self, environment, time):
+        # For eacn of households, firms and banks
+        if time == 0:
+            self.hh_endow_assets(environment, time)
+            self.firm_endow_assets(environment, time)
+            self.bank_endow_assets(environment, time)
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
     # hh_endow_assets
     # This function makes sure that all households have the appropriate
     # deposit endowment for every step, in line with the parameters
     # -------------------------------------------------------------------------
     def hh_endow_assets(self,  environment, time):
-        # Call endowment method in Households and Banks class
+        # Call endowment method in Households class
         if time == 0:
             for household in environment.households:
                 household.hh_asset_allocation(environment, time)
+            logging.info("  deposit endowed on step: %s",  time)
+        # Keep on the log with the number of step, for debugging mostly
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # firm_endow_assets
+    # This function makes sure that all firms have the appropriate
+    # deposit endowment for every step, in line with the parameters
+    # -------------------------------------------------------------------------
+    def firm_endow_assets(self,  environment, time):
+        # Call endowment method in Firms class
+        if time == 0:
+            for firm in environment.firms:
+                firm.firm_asset_allocation(environment, time)
             logging.info("  deposit endowed on step: %s",  time)
         # Keep on the log with the number of step, for debugging mostly
     # -------------------------------------------------------------------------
@@ -154,6 +180,28 @@ class Updater(BaseModel):
                     environment.get_agent_by_id(dat["id"]).initiate_payment(environment, time)
                     # Make payment using network class method   
     # -------------------------------------------------------------------------    
+
+    # -------------------------------------------------------------------------
+    # production(environment, time)
+    # This function calls for production to be initiated for the step. Households
+    # provide labour to firms, which firms pay for. Firms use labour to produce
+    # output. The households purchase output and the labour/output obligation is
+    # cancelled out.
+    # -------------------------------------------------------------------------
+    def initiate_production(self, environment, time):
+        if time > 0:
+            import networkx as nx
+            import numpy as np
+            # Set G as the network
+            G = environment.network
+            # Loop through households in the network
+            for u, dat in G.nodes(data=True):
+                # For each node call households to provide labour
+                environment.get_agent_by_id(dat["id"]).provide_labour(environment, time)
+            # Loop through firms and call production method
+            for firm in environment.firms:
+                firm.production(environment, time)
+    # -------------------------------------------------------------------------  
  
 
     # -------------------------------------------------------------------------

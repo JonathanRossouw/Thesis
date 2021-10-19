@@ -178,6 +178,47 @@ class Bank(BaseAgent):
         environment.new_transaction(type_="deposits_endow", asset='', from_= loan_tranx["from_"], to = loan_tranx["bank_from"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
     # -------------------------------------------------------------------------
 
+    # -------------------------------------------------------------------------
+    # bank_initialize_firm
+    # firms choices proportion of endowment held in bank deposits
+    # and proportion held in CBDC
+    # -------------------------------------------------------------------------
+    def bank_initialize_firm(self, environment, loan_tranx):
+        # Create loan agreement with household
+        environment.new_transaction(type_="loan_endow", asset='', from_= loan_tranx["from_"], to = loan_tranx["bank_from"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        # Open deposit account for household at bank
+        environment.new_transaction(type_="deposits_endow", asset='', from_= loan_tranx["from_"], to = loan_tranx["bank_from"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # new_loan
+    # firm takes out loan to finance production
+    # -------------------------------------------------------------------------
+    def new_loan(self, environment, loan_tranx):
+        # Create loan agreement with household
+        environment.new_transaction(type_="loan", asset='', from_= loan_tranx["from_"], to = loan_tranx["bank_from"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        # Open deposit account for household at bank
+        environment.new_transaction(type_="deposits", asset='', from_= loan_tranx["from_"], to = loan_tranx["bank_from"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        print(f"{loan_tranx['from_']} took out new loan of {loan_tranx['amount']} at {loan_tranx['bank_from']}")
+        if self.balance("reserves") < loan_tranx["amount"]:
+            print(f"{self.identifier} required more reserves, since {self.balance('reserves')} reserves is less than {loan_tranx['amount']} loan amount")
+            # Increase reserves to finance loan
+            tranx = {"from_":self.identifier, "to":self.identifier, "amount":loan_tranx["amount"]}
+            environment.get_agent_by_id("central_bank").central_bank_initialize_bank(environment, tranx)
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # repay_loan
+    # firm repays loan for production
+    # -------------------------------------------------------------------------
+    def repay_loan(self, environment, loan_tranx):
+        # Create loan agreement with household
+        environment.new_transaction(type_="loan", asset='', from_= loan_tranx["bank_from"], to = loan_tranx["from_"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        # Open deposit account for household at bank
+        environment.new_transaction(type_="deposits", asset='', from_= loan_tranx["bank_from"], to = loan_tranx["from_"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        print(f"{loan_tranx['from_']} repaid loan of {loan_tranx['amount']} at {loan_tranx['bank_from']}")
+    # -------------------------------------------------------------------------
+
 
     # -------------------------------------------------------------------------
     # bank_asset_allocation
@@ -187,10 +228,10 @@ class Bank(BaseAgent):
     # -------------------------------------------------------------------------
     def bank_asset_allocation(self, environment):
         # Create reserves
-        reserves_required = (0.5 * 24 * len(environment.households))/len(environment.banks)
+        reserves_required = 0.2 * self.balance("deposits")
         reserves_allocation = {"type_": "reserves_required", "from_": self.identifier, "to": "central_bank", "amount": reserves_required}
         environment.get_agent_by_id("central_bank").central_bank_initialize_bank(environment, reserves_allocation)
-        print(f"{self.identifier} has {reserves_required} reserves, and {reserves_required} Open Market Transactions")
+        print(f"{self.identifier} has {reserves_required} reserves, and {reserves_required} Open Market Operations")
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -202,7 +243,7 @@ class Bank(BaseAgent):
         loans = self.get_account("loan_endow")
         deposits = self.get_account("deposits_endow")
         reserves = self.get_account("reserves_required")
-        omt = self.get_account("omt_endow")
+        omo = self.get_account("omo_endow")
         batch = 0
         # Determine value of batched payments
         for tranx in self.store:
@@ -216,8 +257,8 @@ class Bank(BaseAgent):
                    loans += tranx.amount
                 elif tranx.type_ == "reserves":
                    reserves -= tranx.amount
-                elif tranx.type_ == "omt":
-                   omt -= tranx.amount
+                elif tranx.type_ == "omo":
+                   omo -= tranx.amount
             elif tranx.from_.identifier != self.identifier:
                 if tranx.type_ == "deposits":
                    deposits -= tranx.amount
@@ -225,8 +266,8 @@ class Bank(BaseAgent):
                    loans -= tranx.amount
                 elif tranx.type_ == "reserves":
                    reserves += tranx.amount
-                elif tranx.type_ == "omt":
-                   omt += tranx.amount
+                elif tranx.type_ == "omo":
+                   omo += tranx.amount
         # Return Requested Balance
         if type_ == "deposits":
             return deposits #- batch
@@ -234,12 +275,12 @@ class Bank(BaseAgent):
             return loans
         elif type_ == "reserves":
             return reserves
-        elif type_ == "omt":
-            return omt
+        elif type_ == "omo":
+            return omo
         elif type_ == "assets":
             return (reserves + loans)
         elif type_ == "liabilities":
-            return (omt + deposits + batch)
+            return (omo + deposits + batch)
         elif type_ == "batch":
             return batch
     # -------------------------------------------------------------------------

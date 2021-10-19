@@ -217,6 +217,8 @@ class Measurement(BaseMeasurement):
         if ident == "total_batch":
             return batch
             
+        if ident == "total_output":
+            return self.environment.total_output
 
 
 
