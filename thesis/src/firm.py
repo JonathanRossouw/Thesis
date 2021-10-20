@@ -168,14 +168,22 @@ class Firm(BaseAgent):
 
     # -------------------------------------------------------------------------
     # firm_asset_allocation
-    # firm choices proportion of endowment held in bank deposits
-    # and proportion held in CBDC
+    # firm takes loan out at bank
     # -------------------------------------------------------------------------
-    def firm_asset_allocation(self, environment, time):
+    def firm_asset_endowment(self, environment, time):
         import random
         # Create Loan Account at Bank
         loan_tranx = {"type_": "loan_endow", "from_" : self.identifier, "bank_from": self.bank_acc, "to" : self.identifier, "bank_to" : self.bank_acc, "amount" : self.endowment, "time" : time}
         environment.get_agent_by_id(self.bank_acc).bank_initialize_firm(environment, loan_tranx)
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # firm_asset_allocation
+    # firm chooses proportion of endowment held in bank deposits, CBDC and
+    # bank notes
+    # -------------------------------------------------------------------------
+    def firm_asset_allocation(self, environment, time):
+        import random
         # Decide on asset allocation
         # Decide on Deposits
         deposits = self.endowment * 2/3# random.uniform(0.4, 0.8)   #### Use this to set asset allowcation to only deposits
@@ -298,6 +306,11 @@ class Firm(BaseAgent):
         loan_tranx = {"type_": "loans", "from_" : self.identifier, "bank_from": self.bank_acc, "to" : self.identifier, "bank_to" : self.bank_acc, "amount" : loan, "time" : time}
         environment.get_agent_by_id(self.bank_acc).new_loan(environment, loan_tranx)
 
+        # Produce Output
+
+        output = round(alpha * (labour ** beta) * (capital ** gamma), 5)
+        environment.total_output += output
+
         # Create wage agreement and pay for wages
         for id_ in households:
             house = environment.get_agent_by_id(id_)
@@ -309,12 +322,7 @@ class Firm(BaseAgent):
             # Pay for Wages with deposits
             wage_tranx["type_"] = "deposits"
             environment.get_agent_by_id(self.bank_acc).make_payment(environment, wage_tranx, time)
-            print(f"{wages} wages paid to {house.identifier}")
-
-        # Produce Output
-
-        output = round(alpha * (labour ** beta) * (capital ** gamma), 5)
-        environment.total_output += output
+            print(f"{wages} unit wage agreement with {house.identifier} for labour")
 
         # Create output agreement and sell output
         for id_ in households:
@@ -326,7 +334,7 @@ class Firm(BaseAgent):
             # Sell output for deposits
             sell_tranx = {"type_": "deposits", "from_" : house.identifier, "bank_from": house.bank_acc, "to" : self.identifier, "bank_to" : self.bank_acc, "amount" : out, "time" : time}
             house.deposits_payment(environment, sell_tranx, time)
-            print(f"{out} output sold to {house.identifier}")
+            print(f"{out} units output agreement with {house.identifier}")
 
         # Repay Loan
         environment.get_agent_by_id(self.bank_acc).repay_loan(environment, loan_tranx)

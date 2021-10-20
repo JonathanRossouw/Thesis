@@ -113,6 +113,8 @@ class Updater(BaseModel):
             self.hh_endow_assets(environment, time)
             self.firm_endow_assets(environment, time)
             self.bank_endow_assets(environment, time)
+            self.hh_allocate_assets(environment, time)
+            self.firm_allocate_assets(environment, time)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -124,9 +126,20 @@ class Updater(BaseModel):
         # Call endowment method in Households class
         if time == 0:
             for household in environment.households:
-                household.hh_asset_allocation(environment, time)
+                household.hh_asset_endowment(environment, time)
             logging.info("  deposit endowed on step: %s",  time)
         # Keep on the log with the number of step, for debugging mostly
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # hh_allocate_assets
+    # Households reallocate deposits to CBDC, bank notes and remaining deposits
+    # -------------------------------------------------------------------------
+    def hh_allocate_assets(self,  environment, time):
+        # Call allocation method in Households class
+        if time == 0:
+            for household in environment.households:
+                household.hh_asset_allocation(environment, time)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -138,9 +151,21 @@ class Updater(BaseModel):
         # Call endowment method in Firms class
         if time == 0:
             for firm in environment.firms:
-                firm.firm_asset_allocation(environment, time)
+                firm.firm_asset_endowment(environment, time)
             logging.info("  deposit endowed on step: %s",  time)
         # Keep on the log with the number of step, for debugging mostly
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # firm_allocate_assets
+    # This function makes sure that all firms have the appropriate
+    # deposit endowment for every step, in line with the parameters
+    # -------------------------------------------------------------------------
+    def firm_allocate_assets(self,  environment, time):
+        # Call allocation method in Firms class
+        if time == 0:
+            for firm in environment.firms:
+                firm.firm_asset_allocation(environment, time)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

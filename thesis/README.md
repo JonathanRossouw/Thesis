@@ -13,19 +13,34 @@
 
 ### Initialization
 
-- Loop through Banks. Each bank requests reserves from Central Bank equal to (0.5 * household endowment * number of households)/number of banks. Central Bank creates Open Market Transaction equal to requested reserves.
+- Loop through households. Each household is endowed with equity that it uses to take out a loan at the bank where it is a customer. The bank creates a loan and deposits for the household at the bank. 
 
-- Loop through Households. Each household is endowed with 24 units of equity. Each household taken out a loan at the bank they are customers of against equity. Households use loans to allocate desired assets allocation bewteen deposits, CBDC and bank notes. Households make request to bank to exchange deposits for different assets. Banks decrease deposits and make request central banks to exchange reserves for requested amounts of CBDC and bank notes from households. Central Bank decreases reserves, transfers CBDC and bank notes to households, then increases banks OMT and reserves.
+- Loop through firms. Each household is endowed with equity that it uses to take out a loan at the bank where it is a customer. The bank creates a loan and deposits for the firm at the bank.
+
+- Loop through the banks. Each bank requires reserves equal to a percentage of their deposits. The banks request the required reserves from the central bank who conducts open market operations to provide banks with repayment agreements and reserves.
+
+- Loop through households. The households then reallocate their deposits to CBDC, bank notes and remaining deposits. This is done by making request at their bank to exchange deposits for other assets.
+
+- Loop through firms. The firms then reallocate their deposits to CBDC and remaining deposits. This is done by making request at their bank to exchange deposits for other assets.
 
 
-### Payment Shocks
+### Production
 
-- Loop through nodes on network of households.
-- Randomly assign payment shock to household.
-- Household randomly selects household with which it is a neighbour in the network to send payment to.
-- Payment amount is a random portion of total assets, including deposits, CBDC and bank notes
-- If payment is to a household which is a customer of the same bank, then preference of payment methods is deposits, CBDC then bank notes
-- If payment is to a household which is a customer of a different bank, then preference of payment methods is CBDC, bank notes then deposits. (Preferences are used to limit use of batching).
+- Loop through households who agree to provide labour to the firms where they work.
+
+- Firms take out loans backed by the labour agreement at their bank. The bank in turn provides deposits equal to the loan amount.
+
+- Firm creates output
+
+- Firm creates wage agreements with households according to wage and labour supplied.
+
+- Firm pays households for wages using deposits
+
+- Households make output purchase agreement, that states how much output the household will consume.
+
+- Household purchases output with deposists.
+
+- Firm repays loan.
 
 
 ### Payment Methods

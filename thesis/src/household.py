@@ -171,15 +171,24 @@ class Household(BaseAgent):
     # ------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
-    # hh_asset_allocation
-    # household randomly choices proportion of endowment held in bank deposits
-    # and proportion held in CBDC
+    # hh_asset_endowment
+    # household takes out loan at bank
     # -------------------------------------------------------------------------
-    def hh_asset_allocation(self, environment, time):
+    def hh_asset_endowment(self, environment, time):
         import random
         # Create Loan Account at Bank
         loan_tranx = {"type_": "loan_endow", "from_" : self.identifier, "bank_from": self.bank_acc, "to" : self.identifier, "bank_to" : self.bank_acc, "amount" : self.endowment, "time" : time}
         environment.get_agent_by_id(self.bank_acc).bank_initialize_household(environment, loan_tranx)
+    # -------------------------------------------------------------------------
+
+
+    # -------------------------------------------------------------------------
+    # hh_asset_allocation
+    # household chooses proportion of endowment held in bank deposits, CBDC and
+    # in bank notes
+    # -------------------------------------------------------------------------
+    def hh_asset_allocation(self, environment, time):
+        import random
         # Decide on asset allocation
         # Decide on Deposits
         deposits = self.endowment * 0.25 #random.uniform(0.4, 0.8)   #### Use this to set asset allowcation to only deposits
@@ -274,6 +283,7 @@ class Household(BaseAgent):
         # Create transaction of labour equal to labour endowment to firm
         labour_tranx = {"type_": "labour", "from_" : self.identifier, "to" : self.firm_acc, "amount" : self.labour, "time" : time}
         environment.new_transaction(type_=labour_tranx["type_"], asset='', from_= labour_tranx["from_"], to = labour_tranx["to"], amount = labour_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        print(f"{self.identifier} provided {labour_tranx['to']} with {labour_tranx['amount']} units of labour")
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

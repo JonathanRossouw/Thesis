@@ -176,6 +176,7 @@ class Bank(BaseAgent):
         environment.new_transaction(type_="loan_endow", asset='', from_= loan_tranx["from_"], to = loan_tranx["bank_from"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         # Open deposit account for household at bank
         environment.new_transaction(type_="deposits_endow", asset='', from_= loan_tranx["from_"], to = loan_tranx["bank_from"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        print(f"{loan_tranx['from_']} took out loan of {loan_tranx['amount']} at {self.identifier} ")
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -188,6 +189,7 @@ class Bank(BaseAgent):
         environment.new_transaction(type_="loan_endow", asset='', from_= loan_tranx["from_"], to = loan_tranx["bank_from"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         # Open deposit account for household at bank
         environment.new_transaction(type_="deposits_endow", asset='', from_= loan_tranx["from_"], to = loan_tranx["bank_from"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        print(f"{loan_tranx['from_']} took out loan of {loan_tranx['amount']} at {self.identifier} ")
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -203,7 +205,7 @@ class Bank(BaseAgent):
         if self.balance("reserves") < loan_tranx["amount"]:
             print(f"{self.identifier} required more reserves, since {self.balance('reserves')} reserves is less than {loan_tranx['amount']} loan amount")
             # Increase reserves to finance loan
-            tranx = {"from_":self.identifier, "to":self.identifier, "amount":loan_tranx["amount"]}
+            tranx = {"from_":self.identifier, "to":"central_bank", "amount":loan_tranx["amount"]}
             environment.get_agent_by_id("central_bank").central_bank_initialize_bank(environment, tranx)
     # -------------------------------------------------------------------------
 
