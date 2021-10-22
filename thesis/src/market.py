@@ -102,6 +102,24 @@ class Market(BaseMarket):
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
+    # output_rationing(self, environment, node)
+    # ration demand and supply for output per household and all firms
+    # -------------------------------------------------------------------------
+    def output_rationing(self, environment, node, time):
+        G = environment.consumption_network
+        house = environment.get_agent_by_id(node[0])
+        #if house.supply != 0:
+        agents = [[node[0], house.supply]]
+        for u in list(G.adj[node[0]]):
+            firm = environment.get_agent_by_id(u)
+            agents.append([u, firm.supply])
+        rationing_schedule = self.rationing(agents)[0]
+        environment.get_agent_by_id(rationing_schedule[0]).supply -= rationing_schedule[2]
+        environment.get_agent_by_id(rationing_schedule[1]).supply += rationing_schedule[2]
+        print(f"{rationing_schedule[2]} of output transferred from {rationing_schedule[0]} to {rationing_schedule[1]} at time {time}")
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
     # tatonnement([sellers], [buyers], starting_price)
     # This function performs a Walrasian auction to determine the
     # price at equilibrium (market clearing).

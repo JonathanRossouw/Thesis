@@ -28,7 +28,7 @@
 
 - Loop through households who agree to provide labour to the firms where they work.
 
-- Firms take out loans backed by the labour agreement at their bank. The bank in turn provides deposits equal to the loan amount.
+- Firms take out loans backed by the labour agreement at their bank. The bank in turn provides deposits equal to the loan amount. If loan amount is larger than current reserves, bank requires excess reserves from central bank equal to size of loan.
 
 - Firm creates output
 
@@ -42,6 +42,7 @@
 
 - Firm repays loan.
 
+- Both wage agreement and output purchase agreements between households and firms lapse.
 
 ### Payment Methods
 

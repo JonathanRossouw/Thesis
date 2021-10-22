@@ -21,6 +21,8 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 import networkx as nx
 import logging
 
+from networkx.algorithms.shortest_paths.weighted import negative_edge_cycle
+
 #-------------------------------------------------------------------------
 #
 # class Network
@@ -46,22 +48,95 @@ class Network(object):
 	#-------------------------------------------------------------------------
 
 	#-------------------------------------------------------------------------
-	# initialize_networks
+	# initialize_social_network
 	#-------------------------------------------------------------------------    
-	def initialize_networks(self,  environment):
+	def initialize_social_network(self,  environment):
 		# Create networkx graph instance
-		self.contracts = nx.DiGraph()
+		self.social_network = nx.Graph()
 		# Determine number of households
 		n = len(environment.households)
 		# Create random graph with number of nodes equal to number of households.
 		# Parameter determining randomness of graph treated as exogenous for now
-		self.contracts = nx.gnp_random_graph(n, 0.6,  directed=True)
+		self.social_network = nx.gnp_random_graph(n, 0.6,  directed=False)
 		# Iterate through nodes in graph and assign households to each node.
-		# Give nodes an attribute of the households ID
+		# Relabel node id's to household identifier and id to house
 		for iden, house in enumerate(environment.households):
-			self.contracts.add_node(iden, id = house.identifier)
+			self.social_network.add_node(iden, id = "household")
+			mapping = {iden: house.identifier}
+			nx.relabel_nodes(self.social_network, mapping, copy = False)
 	#-------------------------------------------------------------------------
 
+	#-------------------------------------------------------------------------
+	# initialize_employment_network
+	# Create employment network with firms and households. Edges are created 
+	# between households and firm where they work
+	#-------------------------------------------------------------------------    
+	def initialize_employment_network(self,  environment):
+		import random
+		# Create networkx graph instance
+		self.employment_network = nx.Graph()
+		# Loop through firms adding nodes to network
+		for firm in environment.firms:
+			self.employment_network.add_node(firm.identifier, id = "firm")
+		# Loop through households adding to network and adding edge between 
+		# household and firm where it works
+		for house in environment.households:
+			# Add household to network
+			self.employment_network.add_node(house.identifier, id = "household")
+			# Create edge between household and firm
+			firm_id = random.sample(environment.firms, 1)[0].identifier
+			self.employment_network.add_edge(house.identifier, firm_id)
+	#-------------------------------------------------------------------------
+
+	#-------------------------------------------------------------------------
+	# initialize_consumption_network
+	# Create comsumption network with firms and households. Edges are created 
+	# between households and all firms
+	#-------------------------------------------------------------------------    
+	def initialize_consumption_network(self,  environment):
+		# Create networkx graph instance
+		self.consumption_network = nx.Graph()
+		# Loop through firms adding nodes to network
+		for firm in environment.firms:
+			self.consumption_network.add_node(firm.identifier, id = "firm")
+		# Loop through households adding to network and adding edge between 
+		# household and firm where it works
+		for house in environment.households:
+			# Add household to network
+			self.consumption_network.add_node(house.identifier, id = "household")
+			for node in self.consumption_network.nodes(data=True):
+				if node[1]["id"] == "firm":
+					# Create edge between household and firm
+					self.consumption_network.add_edge(house.identifier, node[0])
+	#-------------------------------------------------------------------------
+
+	#-------------------------------------------------------------------------
+	# initialize_bank_network
+	#-------------------------------------------------------------------------    
+	def initialize_bank_network(self,  environment):
+		import random
+		# Create networkx graph instance
+		self.bank_network = nx.Graph()
+		# Loop through banks adding nodes to network
+		for bank in environment.banks:
+			self.bank_network.add_node(bank.identifier, id = "bank")
+		# Loop through households and firms adding nodes to network and for each
+		# household and firm, adds edge between bank where agent is customer
+		# and agent
+		for house in environment.households:
+			# Add household to network
+			self.bank_network.add_node(house.identifier, id = "household")
+			# Create edge between household and bank
+			bank_id = random.sample(environment.banks, 1)[0].identifier
+			self.bank_network.add_edge(house.identifier, bank_id)
+
+		for firm in environment.firms:
+			# Add firm to network
+			self.bank_network.add_node(firm.identifier, id = "household")
+			# Create edge between firm and bank
+			bank_id = random.sample(environment.banks, 1)[0].identifier
+			self.bank_network.add_edge(firm.identifier, bank_id)
+	#-------------------------------------------------------------------------
 
 #
 # HELPER ROUTINES

@@ -23,6 +23,7 @@ import random
 import logging
 from src.transaction import Transaction
 from src.network import Network
+from src.market import Market
 # -------------------------------------------------------------------------
 #  class Updater
 # -------------------------------------------------------------------------
@@ -89,6 +90,7 @@ class Updater(BaseModel):
         # For now we don't need to keep track of labour left as there is no queue
         self.endow_agents(environment, time)
         self.initiate_production(environment, time)
+        self.do_ration_output(environment, time)
         #self.payment_shock(environment, time)
         self.net_settle(environment, time)
         # The households sell labour to firms
@@ -193,16 +195,16 @@ class Updater(BaseModel):
             import networkx as nx
             import numpy as np
             # Set G as the network
-            G = environment.network
+            G = environment.social_network
             # Loop through nodes in the network
-            for u, dat in G.nodes(data=True):
+            for house in G.nodes:
                 # For each node randomly select whether experiences a shock using 
                 # a random bernoulli variable with p = 0.6
                 shock = np.random.binomial(1, 0.6, 1)
                 # Shock is selected in bernoulli variable equals 1
                 if shock[0] == 1:
                     # Initialize network class instance
-                    environment.get_agent_by_id(dat["id"]).initiate_payment(environment, time)
+                    environment.get_agent_by_id(house).initiate_payment(environment, time)
                     # Make payment using network class method   
     # -------------------------------------------------------------------------    
 
@@ -215,18 +217,33 @@ class Updater(BaseModel):
     # -------------------------------------------------------------------------
     def initiate_production(self, environment, time):
         if time > 0:
-            import networkx as nx
-            import numpy as np
-            # Set G as the network
-            G = environment.network
-            # Loop through households in the network
-            for u, dat in G.nodes(data=True):
-                # For each node call households to provide labour
-                environment.get_agent_by_id(dat["id"]).provide_labour(environment, time)
-            # Loop through firms and call production method
-            for firm in environment.firms:
-                firm.production(environment, time)
-    # -------------------------------------------------------------------------  
+            G = environment.employment_network
+            # Loop through households in the network and provide labour
+            for u in G.nodes(data=False):
+                agent = environment.get_agent_by_id(u)
+                if agent in environment.households:
+                    firm = list(G.adj[u])[0]
+                    agent.provide_labour(environment, firm, time)
+            # Loop through firms in the network and initiate production
+            for u in G.nodes(data=False):
+                agent = environment.get_agent_by_id(u)
+                if agent in environment.firms:
+                    agent.production(environment, time)
+    # ------------------------------------------------------------------------- 
+
+    # -------------------------------------------------------------------------
+    # do_ration_output(self, environment)
+    # Loop through nodes in consumption network and ration output for each 
+    # household and all firms
+    # -------------------------------------------------------------------------
+    def do_ration_output(self, environment, time):
+        if time > 0:
+            mark = Market(environment)
+            G = environment.consumption_network
+            for node in list(G.nodes(data=True)):
+                if node[1]["id"] == "household":
+                    mark.output_rationing(environment, node, time)
+    # -------------------------------------------------------------------------
  
 
     # -------------------------------------------------------------------------

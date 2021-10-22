@@ -342,15 +342,6 @@ class Environment(BaseConfig):
 
         # Initialize networks from initialize_network method
         self.initialize_network()
-
-        # Initialize households that are customers of banks
-        for banx in self.banks:
-            banx.get_households(self)
-
-        for house in self.households:
-            for firm in self.firms:
-                if house.firm_acc[-2:] == firm.identifier[4:6]:
-                    house.firm_acc = firm.identifier
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -461,18 +452,26 @@ class Environment(BaseConfig):
     # -------------------------------------------------------------------------
     # initialize_network
     # Initialize network to environment from network class.
-    # 
     # -------------------------------------------------------------------------
     def initialize_network(self):
         from src.network import Network
         # New Network instance is created
-        network_struc = Network(self)
+        social_network_struc = Network(self)
+        employment_network_struc = Network(self)
+        consumption_network_struc = Network(self)
+        bank_network_struc = Network(self)
         # Use initialize_networks method from Network class to create network 
         # for households. Random network is created and households are assigned
         # to nodes.
-        network_struc.initialize_networks(self)
+        social_network_struc.initialize_social_network(self)
+        employment_network_struc.initialize_employment_network(self)
+        consumption_network_struc.initialize_consumption_network(self)
+        bank_network_struc.initialize_bank_network(self)
         # Set environment variable to random network
-        self.network = network_struc.contracts
+        self.social_network = social_network_struc.social_network
+        self.employment_network = employment_network_struc.employment_network
+        self.consumption_network = consumption_network_struc.consumption_network
+        self.bank_network = bank_network_struc.bank_network
     # -------------------------------------------------------------------------
 
 

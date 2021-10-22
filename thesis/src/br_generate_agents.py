@@ -60,19 +60,13 @@ class Generate_Agents:
 	# read in number of households and banks from parameter_values
 	# generate xml files for households each randomly assigned to a bank
     # -------------------------------------------------------------------------
-	def generate_households(self, numHouseholds, numFirms, numBanks, householdfileName):
-		import sys
-		import random
+	def generate_households(self, numHouseholds, householdfileName):
 		# Read in number of households, number of banks, and name of directory to store households
 		self.numHouseholds = int(numHouseholds)
-		self.numFirms = int(numFirms)
-		self.numBanks = int(numBanks)
 		self.householdfileName = householdfileName
 		# Loop through number of households and create xml files
 		for i in range(self.numHouseholds):
-			bank_acc = random.sample(range(int(self.numBanks)), 1)[0]
-			firm_acc = random.sample(range(int(self.numFirms)), 1)[0]
-			identifier = "household_" + str(i) + "_" + str(bank_acc) + "_" + str(firm_acc)
+			identifier = "household_" + str(i)
 			householdfileName = self.householdfileName + identifier
 			# the following code ensures leading zeros so filenames will be in the right order
 			# for python to read in. Also, bank names are sorted properly in activeBanks of madfimas
@@ -84,8 +78,6 @@ class Generate_Agents:
 			text = text + "    <parameter name='endowment' value='20.00'></parameter>\n"
 			text = text + "    <parameter name='labour' value='100.00'></parameter>\n"
 			text = text + "    <parameter name='propensity_to_save' value='0.4'></parameter>\n"
-			text = text + "    <parameter name='bank_acc' value='bank_"+str(bank_acc) + "'></parameter>\n"
-			text = text + "    <parameter name='firm_acc' value='firm_"+str(firm_acc) + "'></parameter>\n"
 			text = text + "</household>\n"
 			outFile.write(text)
 			outFile.close()
@@ -96,19 +88,14 @@ class Generate_Agents:
 	# read in number of households and banks from parameter_values
 	# generate xml files for households each randomly assigned to a bank
     # -------------------------------------------------------------------------
-	def generate_firms(self, numFirms, numBanks, firmfileName):
-		import sys
-		import random
+	def generate_firms(self, numFirms, firmfileName):
 		# Read in number of firms, number of banks, and name of directory to store firms
 		self.numFirms = int(numFirms)
-		self.numBanks = int(numBanks)
 		self.firmfileName = firmfileName
 		# Loop through number of firms and create xml files
 		for i in range(self.numFirms):
-			bank_acc = random.sample(range(int(self.numBanks)), 1)[0]
-			identifier = "firm_" + str(i) + "_" + str(bank_acc) 
+			identifier = "firm_" + str(i)
 			firmfileName = self.firmfileName + identifier
-			bank_acc = random.sample(range(int(self.numBanks)), 1)[0]
 			# the following code ensures leading zeros so filenames will be in the right order
 			# for python to read in. Also, bank names are sorted properly in activeBanks of madfimas
 			# this code is ugly, but works...
@@ -118,7 +105,6 @@ class Generate_Agents:
 			text = text + "<firm identifier= '" + identifier + "'>\n"
 			text = text + "    <parameter name='endowment' value='30.00'></parameter>\n"
 			text = text + "    <parameter name='propensity_to_save' value='0.4'></parameter>\n"
-			text = text + "    <parameter name='bank_acc' value='bank_"+str(bank_acc) + "'></parameter>\n"
 			text = text + "</firm>\n"
 			outFile.write(text)
 			outFile.close()
@@ -148,7 +134,6 @@ class Generate_Agents:
 			text = text + "<bank identifier= 'bank_" + str(i) + "'>\n"
 			text = text + "    <parameter type='static' name='interest_rate_loans' value='0.00'></parameter>\n"
 			text = text + "    <parameter type='static' name='interest_rate_deposits' value='0.00'></parameter>\n"
-			text = text + "    <parameter name='bank_acc' value='bank_" + str(i) +"'></parameter>\n"
 			text = text + "</bank>\n"
 			outFile.write(text)
 			outFile.close()
