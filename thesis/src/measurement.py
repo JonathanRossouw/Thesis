@@ -167,13 +167,13 @@ class Measurement(BaseMeasurement):
         dep_balance = 0
         cbdc_balance = 0
         for household in self.environment.households:
-            dep_balance += household.balance("deposits")
-            cbdc_balance += household.balance("cbdc")
+            dep_balance += household.get_account("deposits")
+            cbdc_balance += household.get_account("cbdc")
 
         batch = 0
         banks_ids = []
         for banks in self.environment.banks:
-            batch += banks.balance("batch")
+            batch += banks.get_account("batch")
             banks_ids.append(banks.identifier)
         
         if ident == "dep_balance":
@@ -187,23 +187,23 @@ class Measurement(BaseMeasurement):
     
         if ident == "bank_0":
             if ident in banks_ids:
-                return self.environment.get_agent_by_id(ident).balance("deposits")
+                return self.environment.get_agent_by_id(ident).get_account("deposits")
 
         if ident == "bank_1":
             if ident in banks_ids:
-                return self.environment.get_agent_by_id(ident).balance("deposits")
+                return self.environment.get_agent_by_id(ident).get_account("deposits")
 
         if ident == "bank_2":
             if ident in banks_ids:
-                return self.environment.get_agent_by_id(ident).balance("deposits")
+                return self.environment.get_agent_by_id(ident).get_account("deposits")
 
         if ident == "bank_3":
             if ident in banks_ids:
-                return self.environment.get_agent_by_id(ident).balance("deposits")
+                return self.environment.get_agent_by_id(ident).get_account("deposits")
 
         if ident == "bank_4":
             if ident in banks_ids:
-                return self.environment.get_agent_by_id(ident).balance("deposits")
+                return self.environment.get_agent_by_id(ident).get_account("deposits")
 
         if ident == "deposits_payments":
             return self.environment.deposits_payments

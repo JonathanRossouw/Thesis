@@ -41,6 +41,8 @@ class CentralBank(BaseAgent):
     parameters = {}  # parameters of the central bank
     state_variables = {}  # state variables of the central bank
     accounts = []  # all accounts of the central bank (filled with transactions)
+    assets = []
+    liabilities = []
 
     #
     #
@@ -107,19 +109,20 @@ class CentralBank(BaseAgent):
         # INSTEAD USE __getattr__ POWER TO CHANGE THE COMMAND FROM
         # instance.static_parameters["xyz"] TO instance.xyz - THE LATTER IS PREFERRED
         self.parameters["interest_rate_cb_loans"] = 0.0  # interest rate on loans
+        self.assets = ["open_market_operations"]
+        self.liabilities = ["reserves", "cbdc", "bank_notes"]
     # -------------------------------------------------------------------------
 
 
     # -------------------------------------------------------------------------
-    # central_bank_initialize_bank
-    # household randomly choices proportion of endowment held in bank deposits
-    # and proportion held in CBDC
+    # new_reserves
+    # transfer new reserves to bank and open market operations
     # -------------------------------------------------------------------------
-    def central_bank_initialize_bank(self, environment, tranx):
+    def new_reserves(self, environment, tranx):
         # Create reserves for bank
-        environment.new_transaction(type_="reserves_required", asset='', from_= tranx["from_"], to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        environment.new_transaction(type_="reserves", asset='', from_= tranx["from_"], to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         # Create Open Market Operations agreement with Bank
-        environment.new_transaction(type_="omo_endow", asset='', from_= tranx["from_"], to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        environment.new_transaction(type_="open_market_operations", asset='', from_= tranx["to"], to = tranx["from_"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -134,6 +137,7 @@ class CentralBank(BaseAgent):
 		# We print the action of selling to the screen
         print(f"{tranx['from_']}s paid {tranx['amount']}f of cbdc to {'central_bank'}s for {tranx['to']}s at time {tranx['time']}d.")
         print(f"{'central_bank'}s settled {tranx['amount']}f of cbdc to {tranx['to']}s at time {tranx['time']}d.")
+        print(self.balance_sheet())
         #logging.info("  payments made on step: %s",  time)
     # -------------------------------------------------------------------------
 
@@ -149,6 +153,7 @@ class CentralBank(BaseAgent):
 		# We print the action of selling to the screen
         print(f"{tranx['from_']}s paid {tranx['amount']}f of cbdc to {self.identifier}s for {tranx['to']}s at time {tranx['time']}d.")
         print(f"{self.identifier}s settled {tranx['amount']}f of cbdc to {tranx['to']}s at time {tranx['time']}d.")
+        print(self.balance_sheet())
         #logging.info("  payments made on step: %s",  time)
     # -------------------------------------------------------------------------
 
@@ -158,56 +163,11 @@ class CentralBank(BaseAgent):
     # -------------------------------------------------------------------------
     def rgts_payment(self, environment, tranx, time):
 		# Transfer funds from central bank to bank
-        environment.new_transaction(type_="reserves", asset='', from_=self.identifier, to=tranx["bank_to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        environment.new_transaction(type_="reserves", asset='', from_=tranx["bank_from"], to=tranx["bank_to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         environment.get_agent_by_id(tranx["bank_to"]).settle_payment(environment, tranx, time)
         print(f"{self.identifier} RTGSed {tranx['amount']} of reserves to {tranx['bank_to']} at time {tranx['time']}d.")
+        print(self.balance_sheet())
         #logging.info("  payments made on step: %s",  time)
-    # -------------------------------------------------------------------------
-
-    # -------------------------------------------------------------------------
-    # balance
-    # net payments and receipts plus initial deposits
-    # returns balance
-    # -------------------------------------------------------------------------
-    def balance(self, type_):
-        # Determine Endowments
-        reserves = self.get_account("reserves_required")
-        omo = self.get_account("omo_endow")
-        cbdc = self.get_account("cbdc_endow")
-        bank_notes = self.get_account("bank_notes_endow")
-        # Track Changes for different asset classes
-        for tranx in self.accounts:
-            if tranx.from_.identifier == self.identifier:
-                if tranx.type_ == "reserves":
-                   reserves += tranx.amount
-                elif tranx.type_ == "omo":
-                   omo += tranx.amount
-                elif tranx.type_ == "cbdc":
-                   cbdc += tranx.amount
-                elif tranx.type_ == "bank_notes":
-                   bank_notes += tranx.amount
-            elif tranx.from_.identifier != self.identifier:
-                if tranx.type_ == "reserves":
-                   reserves -= tranx.amount
-                elif tranx.type_ == "omo":
-                   omo -= tranx.amount
-                elif tranx.type_ == "cbdc":
-                   cbdc -= tranx.amount
-                elif tranx.type_ == "bank_notes":
-                   bank_notes -= tranx.amount
-        # Return Requested Balance
-        if type_ == "reserves":
-            return reserves
-        elif type_ == "omo":
-            return omo
-        elif type_ == "cbdc":
-            return cbdc
-        elif type_ == "bank_notes":
-            return bank_notes
-        elif type_ == "assets":
-            return (omo)
-        elif type_ == "liabilities":
-            return (reserves + cbdc + bank_notes)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -215,16 +175,13 @@ class CentralBank(BaseAgent):
     # Household exchanges deposits at bank for cbdc at central bank
     # -------------------------------------------------------------------------
     def cbdc_settle(self, environment, tranx, time):
-        # Transfer Banks Reserves for CBDC
-        # Decrease Reserves for Bank and Central Bank
-        environment.new_transaction(type_="reserves", asset='', from_= tranx["bank_from"], to = "central_bank", amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         # Transfer CBDC to Household
         environment.new_transaction(type_="cbdc", asset='', from_="central_bank", to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         # Transfer Open Market Operations to Bank
-        environment.new_transaction(type_="omo", asset='', from_="central_bank", to=tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to="central_bank", amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         # Increase Bank Reserves equal to increase Open Market Operations agreement
-        environment.new_transaction(type_="reserves", asset='', from_= "central_bank", to= tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         print(f"CBDC settlement of {tranx['amount']} to {tranx['from_']} complete")
+        print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
 
@@ -233,15 +190,13 @@ class CentralBank(BaseAgent):
     # Household exchanges deposits at bank for Bank Notes at Central Bank
     # -------------------------------------------------------------------------
     def bank_notes_settle(self, environment, tranx, time):
-        # Decrease Reserves for Bank and Central Bank
-        environment.new_transaction(type_="reserves", asset='', from_= tranx["bank_from"], to = "central_bank", amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         # Transfer Bank Notes to Household
         environment.new_transaction(type_="bank_notes", asset='', from_="central_bank", to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         # Transfer Open Market Operations to Bank
-        environment.new_transaction(type_="omo", asset='', from_="central_bank", to=tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to="central_bank", amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         # Increase Bank Reserves equal to increase Open Market Operations agreement
-        environment.new_transaction(type_="reserves", asset='', from_= "central_bank", to= tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         print(f"Bank Notes settlement of {tranx['amount']} to {tranx['from_']} complete")
+        print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
 
@@ -280,12 +235,34 @@ class CentralBank(BaseAgent):
     # ------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
+    # balance_sheet
+    # returns balance sheet of agent
+    # -------------------------------------------------------------------------
+    def balance_sheet(self):
+        balance_sheet = {}
+        assets = {}
+        liabilities = {}
+        for item in self.assets:
+            assets[item] = self.get_account(item)
+        for item in self.liabilities:
+            liabilities[item] = self.get_account(item)
+
+        balance_sheet["assets"] = assets
+        balance_sheet["liabilities"] = liabilities
+        balance_sheet = {self.identifier: balance_sheet}
+        return balance_sheet
+
+    # -------------------------------------------------------------------------
+
+
+    # -------------------------------------------------------------------------
     # check_consistency
-    # Central bank is not balance sheet consistent in the model
+    # checks whether the assets and liabilities have the same total value
     # -------------------------------------------------------------------------
     def check_consistency(self):
-        assets = round(self.balance("assets"), 0)
-        liabilities = round(self.balance("liabilities"), 0)
+        balance_sheet = self.balance_sheet()
+        assets = round(sum(balance_sheet[self.identifier]["assets"].values()), 0)
+        liabilities = round(sum(balance_sheet[self.identifier]["liabilities"].values()), 0)
         return (assets == liabilities)
     # -------------------------------------------------------------------------
 
@@ -294,7 +271,21 @@ class CentralBank(BaseAgent):
     # returns the value of all transactions of a given type
     # -------------------------------------------------------------------------
     def get_account(self,  type_):
-        return super(CentralBank, self).get_account(type_)
+        volume = 0.0
+
+        for transaction in self.accounts:
+            if transaction.type_ in self.assets:
+                if (transaction.type_ == type_) & (transaction.from_.identifier == self.identifier):
+                    volume = volume - float(transaction.amount)
+                elif (transaction.type_ == type_) & (transaction.from_ .identifier!= self.identifier):
+                    volume = volume + float(transaction.amount)
+            elif transaction.type_ in self.liabilities:
+                if (transaction.type_ == type_) & (transaction.from_.identifier == self.identifier):
+                    volume = volume + float(transaction.amount)
+                elif (transaction.type_ == type_) & (transaction.from_.identifier != self.identifier):
+                    volume = volume - float(transaction.amount)
+
+        return volume
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

@@ -41,6 +41,8 @@ class Household(BaseAgent):
     parameters = {}  # parameters of the specific household
     state_variables = {}  # state variables of the specific household
     accounts = []  # all accounts of a household (filled with transactions)
+    assets = []
+    liabilities = []
 
     #
     #
@@ -111,6 +113,8 @@ class Household(BaseAgent):
         #self.parameters["active"] = 0  # this is a control parameter checking whether bank is active
         # The below is not needed, but kept just in case it will become needed
         # self.state_variables["sweep_labour"] = 0.0  # labour left in the simulation step
+        self.assets = ["capital_firm", "capital_bank", "deposits", "cbdc", "bank_notes", "output_agreement"]
+        self.liabilities = ["equity", "loans", "wage_agreement"]
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -176,9 +180,21 @@ class Household(BaseAgent):
     # -------------------------------------------------------------------------
     def hh_asset_endowment(self, environment, time):
         bank_acc = list(environment.bank_network.adj[self.identifier])[0]
+        firm_acc = list(environment.employment_network.adj[self.identifier])[0]
+        # Allocate Equity
+        equity_tranx = {"type_": "equity", "from_" : self.identifier, "bank_from": "", "to" : self.identifier, "bank_to" : "", "amount" : self.equity, "time" : time}
+        environment.new_transaction(type_=equity_tranx["type_"], asset='', from_= equity_tranx["from_"], to = equity_tranx["to"], amount = equity_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        # Capitalize firms
+        equity_firm_tranx = {"type_": "capital_firm", "from_" : firm_acc, "to" : self.identifier, "amount" : self.equity/2, "time" : time}
+        environment.get_agent_by_id(firm_acc).firm_capitalize(environment, equity_firm_tranx, time)
+        # Capitalize banks
+        equity_bank_tranx = {"type_": "capital_bank", "from_" : bank_acc, "bank_from": bank_acc, "to" : self.identifier, "bank_to" : bank_acc, "amount" : self.equity/2, "time" : time}
+        environment.get_agent_by_id(bank_acc).bank_capitalize(environment, equity_bank_tranx, time)
+        print(self.balance_sheet())
         # Create Loan Account at Bank
-        loan_tranx = {"type_": "loan_endow", "from_" : self.identifier, "bank_from": bank_acc, "to" : self.identifier, "bank_to" : bank_acc, "amount" : self.endowment, "time" : time}
-        environment.get_agent_by_id(bank_acc).bank_initialize_household(environment, loan_tranx)
+        loan_tranx = {"type_": "loans", "from_" : self.identifier, "bank_from": bank_acc, "to" : bank_acc, "bank_to" : bank_acc, "amount" : self.equity, "time" : time}
+        environment.get_agent_by_id(bank_acc).new_loan(environment, loan_tranx)
+        print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
 
@@ -191,11 +207,11 @@ class Household(BaseAgent):
         import random
         # Decide on asset allocation
         # Decide on Deposits
-        deposits = self.endowment * 0.25 #random.uniform(0.4, 0.8)   #### Use this to set asset allowcation to only deposits
+        deposits = self.get_account("deposits") * 0.5 #random.uniform(0.4, 0.8)   #### Use this to set asset allowcation to only deposits
         # Decide on CBDC
-        cbdc = self.endowment * 0.5 # random.uniform(0.5, 1)  #### Use this to set asset allowcation to only CBDC
+        cbdc = self.get_account("deposits") * 0.25 # random.uniform(0.5, 1)  #### Use this to set asset allowcation to only CBDC
         # Remainder to bank_notes
-        bank_notes = (self.endowment - deposits - cbdc)
+        bank_notes = (self.get_account("deposits") - deposits - cbdc)
         # Purchase CBDC from Deposits at Bank with Central Bank
         bank_acc = list(environment.bank_network.adj[self.identifier])[0]
         cbdc_allocation = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : "central_bank", "bank_to" : "central_bank", "amount" : cbdc, "time" : time}
@@ -204,87 +220,7 @@ class Household(BaseAgent):
         bank_notes_allocation = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : "central_bank", "bank_to" : "central_bank", "amount" : bank_notes, "time" : time}
         environment.get_agent_by_id(bank_acc).bank_notes_purchase(environment, bank_notes_allocation, time)
         print(f"{self.identifier} chose {deposits} deposits, {cbdc} cbdc, and {bank_notes} bank_notes")
-    # -------------------------------------------------------------------------
-
-    # -------------------------------------------------------------------------
-    # balance
-    # net payments and receipts, returns balance
-    # -------------------------------------------------------------------------
-    def balance(self, type_):
-        # Determine Endowments
-        wages = 0
-        output = 0
-        labour = 0
-        loans = self.get_account("loan_endow")
-        deposits = self.get_account("deposits_endow")
-        cbdc = self.get_account("cbdc_endow")
-        bank_notes = self.get_account("bank_notes_endow")
-        # Track Changes for different asset classes
-        for tranx in self.accounts:
-            # Transaction from household decrease balance
-            if tranx.from_.identifier == self.identifier:
-                if tranx.type_ == "deposits":
-                   deposits -= tranx.amount
-                elif tranx.type_ == "loans":
-                   loans -= tranx.amount
-                elif tranx.type_ == "cbdc":
-                   cbdc -= tranx.amount
-                elif tranx.type_ == "bank_notes":
-                   bank_notes -= tranx.amount
-
-                elif tranx.type_ == "labour":
-                   labour += tranx.amount
-                elif tranx.type_ == "wages":
-                   wages -= tranx.amount
-                elif tranx.type_ == "output":
-                   output -= tranx.amount
-            # Transactions to household increase balance
-            elif tranx.from_.identifier != self.identifier:
-                if tranx.type_ == "deposits":
-                   deposits += tranx.amount
-                elif tranx.type_ == "loans":
-                   loans += tranx.amount
-                elif tranx.type_ == "cbdc":
-                   cbdc += tranx.amount
-                elif tranx.type_ == "bank_notes":
-                   bank_notes += tranx.amount
-
-                elif tranx.type_ == "labour":
-                   labour -= tranx.amount
-                elif tranx.type_ == "wages":
-                   wages += tranx.amount
-                elif tranx.type_ == "output":
-                   output += tranx.amount
-        # Return Requested Balance
-        if type_ == "deposits":
-            return deposits
-        elif type_ == "loans":
-            return loans
-        elif type_ == "cbdc":
-            return cbdc
-        elif type_ == "bank_notes":
-            return bank_notes
-        elif type_ == "labour":
-            return labour
-        elif type_ == "wages":
-            return wages
-        elif type_ == "output":
-            return output
-        elif type_ == "assets":
-            return (deposits + cbdc + bank_notes + output)
-        elif type_ == "liabilities":
-            return (loans + wages)
-    # -------------------------------------------------------------------------
-
-    # -------------------------------------------------------------------------
-    # provide_labour(self, environment, time)
-    # provide labour to firm for production
-    # -------------------------------------------------------------------------
-    def provide_labour(self, environment, firm, time):
-        # Create transaction of labour equal to labour endowment to firm
-        labour_tranx = {"type_": "labour", "from_" : self.identifier, "to" : firm, "amount" : self.labour, "time" : time}
-        environment.new_transaction(type_=labour_tranx["type_"], asset='', from_= labour_tranx["from_"], to = labour_tranx["to"], amount = labour_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        print(f"{self.identifier} provided {labour_tranx['to']} with {labour_tranx['amount']} units of labour")
+        print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -334,22 +270,23 @@ class Household(BaseAgent):
             to_household = random.sample(list(environment.social_network.edges(self.identifier)), 1)[0][1]
             to_bank_acc = list(environment.bank_network.adj[to_household])[0]
             # Payment is a random uniform proportion of the households positive balance
-            if self.balance("assets") > 0.0:
-                payment = self.balance("assets") * random.uniform(0.2, 0.7)
+            total_assets = self.get_account("deposits") + self.get_account("cbdc") + self.get_account("bank_notes")
+            if total_assets > 0.0:
+                payment = total_assets * random.uniform(0.2, 0.7)
                 # Payment to household that is a customer of a different bank
                 # Prefernce for CBDC transactions
                 if to_bank_acc != bank_acc:
                     # If payment shock is less than CBDC balance, full amount paid in CBDC
-                    if payment < self.balance("cbdc"):
+                    if payment < self.get_account("cbdc"):
                         tranx = {"type_": "cbdc", "from_" : self.identifier, "bank_from": "central_bank", "to" : to_household, "bank_to" : "central_bank", "amount" : payment, "time" : time}
                         self.cbdc_payment(environment, tranx, time)
                         environment.cbdc_payments += payment
                         environment.total_payments += payment
                     # If payment shock greater than CBDC balance, all CBDC paid and remainder paid with deposits
-                    elif payment > self.balance("cbdc"):
-                        if payment < (self.balance("cbdc") + self.balance("bank_notes")):
+                    elif payment > self.get_account("cbdc"):
+                        if payment < (self.get_account("cbdc") + self.get_account("bank_notes")):
                             # CBDC portion
-                            cbdc_portion = self.balance("cbdc")
+                            cbdc_portion = self.get_account("cbdc")
                             tranx_cbdc = {"type_": "cbdc", "from_" : self.identifier, "bank_from": "central_bank", "to" : to_household, "bank_to" : "central_bank", "amount" : cbdc_portion, "time" : time}
                             self.cbdc_payment(environment, tranx_cbdc, time)
                             environment.cbdc_payments += cbdc_portion
@@ -358,14 +295,14 @@ class Household(BaseAgent):
                             tranx_bank_notes = {"type_": "bank_notes", "from_" : self.identifier, "bank_from": bank_acc, "to" : to_household, "bank_to" : to_bank_acc, "amount" : amount_remainder, "time" : time}
                             self.bank_notes_payment(environment, tranx_bank_notes, time)
                             environment.total_payments += payment
-                        elif payment > (self.balance("cbdc") + self.balance("bank_notes")):
+                        elif payment > (self.get_account("cbdc") + self.get_account("bank_notes")):
                             # CBDC portion
-                            cbdc_portion = self.balance("cbdc")
+                            cbdc_portion = self.get_account("cbdc")
                             tranx_cbdc = {"type_": "cbdc", "from_" : self.identifier, "bank_from": "central_bank", "to" : to_household, "bank_to" : "central_bank", "amount" : cbdc_portion, "time" : time}
                             self.cbdc_payment(environment, tranx_cbdc, time)
                             environment.cbdc_payments += cbdc_portion
                             # Bank Notes Portion
-                            bank_notes_portion = self.balance("bank_notes")
+                            bank_notes_portion = self.get_account("bank_notes")
                             tranx_bank_notes = {"type_": "bank_notes", "from_" : self.identifier, "bank_from": bank_acc, "to" : to_household, "bank_to" : to_bank_acc, "amount" : bank_notes_portion, "time" : time}
                             self.bank_notes_payment(environment, tranx_bank_notes, time)
                             # Deposits Portion
@@ -380,17 +317,17 @@ class Household(BaseAgent):
                 # Prefernce for deposits transactions
                 elif to_bank_acc == bank_acc:
                     # If payment shock is less than deposits balance, full amount paid in deposits
-                    if payment < self.balance("deposits"):
+                    if payment < self.get_account("deposits"):
                         tranx = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : to_household, "bank_to" : to_bank_acc, "amount" : payment, "time" : time}
                         self.deposits_payment(environment, tranx, time)
                         environment.deposits_payments += payment
                         # Record total payment value
                         environment.total_payments += payment
                     # If payment shock greater than deposits balance, all deposits paid and remainder paid with CBDC
-                    elif payment > self.balance("deposits"):
-                        if payment < (self.balance("deposits") + self.balance("cbdc")):
+                    elif payment > self.get_account("deposits"):
+                        if payment < (self.get_account("deposits") + self.get_account("cbdc")):
                             # Deposits Portion
-                            deposits_portion = self.balance("deposits")
+                            deposits_portion = self.get_account("deposits")
                             tranx_deposits = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : to_household, "bank_to" : to_bank_acc, "amount" : deposits_portion, "time" : time}
                             self.deposits_payment(environment, tranx_deposits, time)
                             environment.deposits_payments += deposits_portion
@@ -401,14 +338,14 @@ class Household(BaseAgent):
                             environment.cbdc_payments += amount_remainder
                             # Record total payment value
                             environment.total_payments += payment
-                        elif payment > (self.balance("deposits") + self.balance("cbdc")):
+                        elif payment > (self.get_account("deposits") + self.get_account("cbdc")):
                             # Deposits Portion
-                            deposits_portion = self.balance("deposits")
+                            deposits_portion = self.get_account("deposits")
                             tranx_deposits = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : to_household, "bank_to" : to_bank_acc, "amount" : deposits_portion, "time" : time}
                             self.deposits_payment(environment, tranx_deposits, time)
                             environment.deposits_payments += deposits_portion
                             # CBDC portion
-                            cbdc_portion = self.balance("cbdc")
+                            cbdc_portion = self.get_account("cbdc")
                             tranx_cbdc = {"type_": "cbdc", "from_" : self.identifier, "bank_from": "central_bank", "to" : to_household, "bank_to" : "central_bank", "amount" : cbdc_portion, "time" : time}
                             self.cbdc_payment(environment, tranx_cbdc, time)
                             environment.cbdc_payments += cbdc_portion
@@ -428,17 +365,35 @@ class Household(BaseAgent):
         pass
     # -------------------------------------------------------------------------
 
+    # -------------------------------------------------------------------------
+    # balance_sheet
+    # returns balance sheet of agent
+    # -------------------------------------------------------------------------
+    def balance_sheet(self):
+        balance_sheet = {}
+        assets = {}
+        liabilities = {}
+        for item in self.assets:
+            assets[item] = self.get_account(item)
+        for item in self.liabilities:
+            liabilities[item] = self.get_account(item)
+
+        balance_sheet["assets"] = assets
+        balance_sheet["liabilities"] = liabilities
+        balance_sheet = {self.identifier: balance_sheet}
+        return balance_sheet
+
+    # -------------------------------------------------------------------------
+
 
     # -------------------------------------------------------------------------
     # check_consistency
     # checks whether the assets and liabilities have the same total value
-    # the types of transactions that make up assets and liabilities is
-    # controlled by the lists below
-    # NOT IMPLEMENTED FOR HOUSEHOLD YET, NEED TO FILL assets & liabilities
     # -------------------------------------------------------------------------
     def check_consistency(self):
-        assets = round(self.balance("assets"), 0)
-        liabilities = round(self.balance("liabilities"), 0)
+        balance_sheet = self.balance_sheet()
+        assets = round(sum(balance_sheet[self.identifier]["assets"].values()), 0)
+        liabilities = round(sum(balance_sheet[self.identifier]["liabilities"].values()), 0)
         return (assets == liabilities)
     # -------------------------------------------------------------------------
 
@@ -447,7 +402,21 @@ class Household(BaseAgent):
     # returns the value of all transactions of a given type
     # -------------------------------------------------------------------------
     def get_account(self,  type_):
-        return super(Household, self).get_account(type_)
+        volume = 0.0
+
+        for transaction in self.accounts:
+            if transaction.type_ in self.assets:
+                if (transaction.type_ == type_) & (transaction.from_.identifier == self.identifier):
+                    volume = volume - float(transaction.amount)
+                elif (transaction.type_ == type_) & (transaction.from_ .identifier!= self.identifier):
+                    volume = volume + float(transaction.amount)
+            elif transaction.type_ in self.liabilities:
+                if (transaction.type_ == type_) & (transaction.from_.identifier == self.identifier):
+                    volume = volume + float(transaction.amount)
+                elif (transaction.type_ == type_) & (transaction.from_.identifier != self.identifier):
+                    volume = volume - float(transaction.amount)
+
+        return volume
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

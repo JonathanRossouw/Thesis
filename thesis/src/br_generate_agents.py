@@ -75,7 +75,7 @@ class Generate_Agents:
 			outFile = open(householdfileName,  'w')
 			text = "<?xml version='1.0' encoding='UTF-8'?>\n"
 			text = text + "<household identifier= '" + identifier + "'>\n"
-			text = text + "    <parameter name='endowment' value='20.00'></parameter>\n"
+			text = text + "    <parameter name='equity' value='20.00'></parameter>\n"
 			text = text + "    <parameter name='labour' value='100.00'></parameter>\n"
 			text = text + "    <parameter name='propensity_to_save' value='0.4'></parameter>\n"
 			text = text + "</household>\n"

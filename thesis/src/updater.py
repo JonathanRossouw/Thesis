@@ -218,12 +218,6 @@ class Updater(BaseModel):
     def initiate_production(self, environment, time):
         if time > 0:
             G = environment.employment_network
-            # Loop through households in the network and provide labour
-            for u in G.nodes(data=False):
-                agent = environment.get_agent_by_id(u)
-                if agent in environment.households:
-                    firm = list(G.adj[u])[0]
-                    agent.provide_labour(environment, firm, time)
             # Loop through firms in the network and initiate production
             for u in G.nodes(data=False):
                 agent = environment.get_agent_by_id(u)
