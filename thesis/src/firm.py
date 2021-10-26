@@ -209,7 +209,7 @@ class Firm(BaseAgent):
         # Purchase CBDC from Deposits at Bank with Central Bank
         bank_acc = list(environment.bank_network.adj[self.identifier])[0]
         cbdc_allocation = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : "central_bank", "bank_to" : "central_bank", "amount" : cbdc, "time" : time}
-        environment.get_agent_by_id(bank_acc).cbdc_purchase(environment, cbdc_allocation, time)
+        environment.get_agent_by_id(bank_acc).cbdc_exchange(environment, cbdc_allocation, time)
         # Create Bank_notes at Central Bank
         bank_notes_allocation = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : "central_bank", "bank_to" : "central_bank", "amount" : bank_notes, "time" : time}
         environment.get_agent_by_id(bank_acc).bank_notes_purchase(environment, bank_notes_allocation, time)
@@ -246,8 +246,11 @@ class Firm(BaseAgent):
         for id_ in households:
             house = environment.get_agent_by_id(id_)
             labour += house.labour # Could be changed to a stochastic variable where household decide whether or not to provide labour
+        print(f"{self.identifier} employed {labour} units of labour from {len(households)} households at time {time}")
         # Set capital equalt to deposits from previous period
         capital = self.get_account("deposits")
+        # Determine initial amount of CBDC
+        cbdc_init = self.get_account("cbdc")
         # Set production function parameters
         wage = 1
         loan = wage * labour
@@ -259,25 +262,40 @@ class Firm(BaseAgent):
         bank_acc = list(environment.bank_network.adj[self.identifier])[0]
         loan_tranx = {"type_": "loans", "from_" : self.identifier, "bank_from": bank_acc, "to" : self.identifier, "bank_to" : bank_acc, "amount" : loan, "time" : time}
         environment.get_agent_by_id(bank_acc).new_loan(environment, loan_tranx)
+        # Determine proportion of wages to be paid in deposits and CBDC
+        deposits_labour = 0
+        cbdc_labour = 0
+        for id_ in households:
+            house = environment.get_agent_by_id(id_)
+            deposits_labour += wage *house.labour * house.asset_prop["deposits"]
+            cbdc_labour += wage*house.labour * house.asset_prop["cbdc"]
+        # Reallocate Deposits to CBDC to pay wages
+        cbdc_tranx = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : "central_bank", "bank_to" : "central_bank", "amount" : cbdc_labour, "time" : time}
+        environment.get_agent_by_id(bank_acc).cbdc_exchange(environment, cbdc_tranx, time)
+
 
         # Produce Output
 
-        self.supply = round(alpha * (labour ** beta) * (capital ** gamma), 5)
+        self.supply = round(alpha * (labour ** beta) * (capital ** gamma), 0)
         environment.total_output += self.supply
+        print(f"{self.identifier} produced {self.supply} units of output using {capital} units of capital and {labour} units of labour at time {time}.")
 
         # Create wage agreement and pay for wages
         for id_ in households:
             house = environment.get_agent_by_id(id_)
             house_bank_acc = list(environment.bank_network.adj[id_])[0]
             # Create Agreement
-            wages = (wage * labour)/len(households)
+            wages = (wage * house.labour)
             wage_tranx = {"type_": "wage_agreement", "from_" : house.identifier, "bank_from": bank_acc, "to" : self.identifier, "bank_to" : house_bank_acc, "amount" : wages, "time" : time}
             environment.new_transaction(type_="wage_agreement", asset='', from_= wage_tranx["from_"], to = wage_tranx["to"], amount = wage_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
             # Create demand
-            house.supply = -self.supply/len(households)
-            # Pay for Wages with deposits
-            deposit_tranx = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : house.identifier, "bank_to" : house_bank_acc, "amount" : wages, "time" : time}
+            house.supply = -round(alpha * (house.labour ** beta) * (capital ** gamma), 0)
+            # Pay for Wages with deposits and CBDC
+            deposit_tranx = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : house.identifier, "bank_to" : house_bank_acc, "amount" : wages*house.asset_prop["deposits"], "time" : time}
             environment.get_agent_by_id(bank_acc).make_payment(environment, deposit_tranx, time)
+
+            cbdc_tranx = {"type_": "deposits", "from_" : self.identifier, "to" : house.identifier, "amount" : wages*house.asset_prop["cbdc"], "time" : time}
+            environment.get_agent_by_id("central_bank").make_cbdc_payment(environment, cbdc_tranx, time)
             print(f"{wages} unit wage agreement with {house.identifier} for labour")
             print(self.balance_sheet())
 
@@ -286,16 +304,21 @@ class Firm(BaseAgent):
             house = environment.get_agent_by_id(id_)
             house_bank_acc = list(environment.bank_network.adj[id_])[0]
             # Create Output agreement and 
-            out = (price * self.supply)/len(households)
+            out = -price*house.supply
             out_tranx = {"type_": "output_agreement", "from_" : self.identifier, "bank_from": bank_acc, "to" : house.identifier, "bank_to" : house_bank_acc, "amount" : out, "time" : time}
             environment.new_transaction(type_="output_agreement", asset='', from_= out_tranx["from_"], to = out_tranx["to"], amount = out_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-            # Sell output for deposits
-            sell_tranx = {"type_": "deposits", "from_" : house.identifier, "bank_from": house_bank_acc, "to" : self.identifier, "bank_to" : bank_acc, "amount" : out, "time" : time}
-            house.deposits_payment(environment, sell_tranx, time)
+            # Sell output for deposits and CBDC
+            deposits_tranx = {"type_": "deposits", "from_" : house.identifier, "bank_from": house_bank_acc, "to" : self.identifier, "bank_to" : bank_acc, "amount" : out*house.asset_prop["deposits"], "time" : time}
+            house.deposits_payment(environment, deposits_tranx, time)
+            cbdc_tranx = {"type_": "deposits", "from_" : house.identifier, "to" : self.identifier, "amount" : out*house.asset_prop["cbdc"], "time" : time}
+            house.cbdc_payment(environment, cbdc_tranx, time)
             print(f"{out} units output agreement with {house.identifier}")
             print(self.balance_sheet())
 
         # Repay Loan
+        cbdc_balance = self.get_account("cbdc") - cbdc_init
+        cbdc_tranx = {"type_": "deposits", "from_" : "central_bank", "bank_from": "central_bank", "to" : self.identifier, "bank_to" : bank_acc, "amount" : cbdc_balance, "time" : time}
+        environment.get_agent_by_id(bank_acc).cbdc_exchange(environment, cbdc_tranx, time)
         environment.get_agent_by_id(bank_acc).repay_loan(environment, loan_tranx)
 
         # Households agreements are settled
@@ -304,11 +327,11 @@ class Firm(BaseAgent):
             house = environment.get_agent_by_id(id_)
             house_bank_acc = list(environment.bank_network.adj[id_])[0]
             # Create Agreement
-            wages = (wage * labour)/len(households)
+            wages = (wage * house.labour)
             wage_tranx = {"type_": "wage_agreement", "from_" : self.identifier, "bank_from": bank_acc, "to" : house.identifier, "bank_to" : house_bank_acc, "amount" : wages, "time" : time}
             environment.new_transaction(type_=wage_tranx["type_"], asset='', from_= wage_tranx["from_"], to = wage_tranx["to"], amount = wage_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
             # Settle output agreements
-            out = (price * self.supply)/len(households)
+            out = -price*house.supply
             out_tranx = {"type_": "output_agreement", "from_" : house.identifier, "bank_from": bank_acc, "to" : self.identifier, "bank_to" : house_bank_acc, "amount" : out, "time" : time}
             environment.new_transaction(type_=out_tranx["type_"], asset='', from_= out_tranx["from_"], to = out_tranx["to"], amount = out_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
     # -------------------------------------------------------------------------

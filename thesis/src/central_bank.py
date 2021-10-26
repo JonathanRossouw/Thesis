@@ -175,13 +175,20 @@ class CentralBank(BaseAgent):
     # Household exchanges deposits at bank for cbdc at central bank
     # -------------------------------------------------------------------------
     def cbdc_settle(self, environment, tranx, time):
-        # Transfer CBDC to Household
-        environment.new_transaction(type_="cbdc", asset='', from_="central_bank", to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        # Transfer Open Market Operations to Bank
-        environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to="central_bank", amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        # Increase Bank Reserves equal to increase Open Market Operations agreement
-        print(f"CBDC settlement of {tranx['amount']} to {tranx['from_']} complete")
-        print(self.balance_sheet())
+        if tranx["to"] is "central_bank":
+            # Transfer CBDC to Agent
+            environment.new_transaction(type_="cbdc", asset='', from_=tranx["bank_to"], to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+            # Transfer Open Market Operations to Bank
+            environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to=tranx["bank_to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+            print(f"CBDC settlement of {tranx['amount']} to {tranx['from_']} complete")
+            print(self.balance_sheet())
+        elif tranx["to"] != "central_bank":
+            # Transfer CBDC from Agent to Central Bank
+            environment.new_transaction(type_="cbdc", asset='', from_=tranx["to"], to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+            # Transfer Open Market Operations from Bank to Central Bank
+            environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to=tranx["bank_to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+            print(f"CBDC settlement of {tranx['amount']} to {tranx['from_']} complete")
+            print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
 

@@ -91,7 +91,8 @@ class Updater(BaseModel):
         self.endow_agents(environment, time)
         self.initiate_production(environment, time)
         self.do_ration_output(environment, time)
-        #self.payment_shock(environment, time)
+        self.net_settle(environment, time)
+        self.payment_shock(environment, time)
         self.net_settle(environment, time)
         # The households sell labour to firms
         #self.sell_labour(environment, time)
@@ -206,6 +207,7 @@ class Updater(BaseModel):
                     # Initialize network class instance
                     environment.get_agent_by_id(house).initiate_payment(environment, time)
                     # Make payment using network class method   
+                    print("PAYMENT SHOCK!!!")
     # -------------------------------------------------------------------------    
 
     # -------------------------------------------------------------------------

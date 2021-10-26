@@ -108,15 +108,17 @@ class Market(BaseMarket):
     def output_rationing(self, environment, node, time):
         G = environment.consumption_network
         house = environment.get_agent_by_id(node[0])
+        print(f"{house.identifier} {house.supply}")
         #if house.supply != 0:
         agents = [[node[0], house.supply]]
         for u in list(G.adj[node[0]]):
             firm = environment.get_agent_by_id(u)
+            print(f"{firm.identifier} {firm.supply}")
             agents.append([u, firm.supply])
-        rationing_schedule = self.rationing(agents)[0]
-        environment.get_agent_by_id(rationing_schedule[0]).supply -= rationing_schedule[2]
-        environment.get_agent_by_id(rationing_schedule[1]).supply += rationing_schedule[2]
-        print(f"{rationing_schedule[2]} of output transferred from {rationing_schedule[0]} to {rationing_schedule[1]} at time {time}")
+        for rationing_schedule in self.rationing(agents):
+            environment.get_agent_by_id(rationing_schedule[0]).supply -= rationing_schedule[2]
+            environment.get_agent_by_id(rationing_schedule[1]).supply += rationing_schedule[2]
+            print(f"{rationing_schedule[2]} of output transferred from {rationing_schedule[0]} to {rationing_schedule[1]} at time {time}")
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

@@ -206,16 +206,17 @@ class Household(BaseAgent):
     def hh_asset_allocation(self, environment, time):
         import random
         # Decide on asset allocation
+        self.asset_prop = {"deposits":0.5, "cbdc":0.5, "bank_notes":0.0}
         # Decide on Deposits
-        deposits = self.get_account("deposits") * 0.5 #random.uniform(0.4, 0.8)   #### Use this to set asset allowcation to only deposits
+        deposits = self.get_account("deposits") * self.asset_prop["deposits"] #random.uniform(0.4, 0.8)   #### Use this to set asset allowcation to only deposits
         # Decide on CBDC
-        cbdc = self.get_account("deposits") * 0.25 # random.uniform(0.5, 1)  #### Use this to set asset allowcation to only CBDC
+        cbdc = self.get_account("deposits") * self.asset_prop["cbdc"] # random.uniform(0.5, 1)  #### Use this to set asset allowcation to only CBDC
         # Remainder to bank_notes
         bank_notes = (self.get_account("deposits") - deposits - cbdc)
         # Purchase CBDC from Deposits at Bank with Central Bank
         bank_acc = list(environment.bank_network.adj[self.identifier])[0]
         cbdc_allocation = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : "central_bank", "bank_to" : "central_bank", "amount" : cbdc, "time" : time}
-        environment.get_agent_by_id(bank_acc).cbdc_purchase(environment, cbdc_allocation, time)
+        environment.get_agent_by_id(bank_acc).cbdc_exchange(environment, cbdc_allocation, time)
         # Create Bank_notes at Central Bank
         bank_notes_allocation = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : "central_bank", "bank_to" : "central_bank", "amount" : bank_notes, "time" : time}
         environment.get_agent_by_id(bank_acc).bank_notes_purchase(environment, bank_notes_allocation, time)
@@ -271,8 +272,14 @@ class Household(BaseAgent):
             to_bank_acc = list(environment.bank_network.adj[to_household])[0]
             # Payment is a random uniform proportion of the households positive balance
             total_assets = self.get_account("deposits") + self.get_account("cbdc") + self.get_account("bank_notes")
-            if total_assets > 0.0:
-                payment = total_assets * random.uniform(0.2, 0.7)
+            total_acceptable_equity = 0.25 * self.equity
+            
+            if total_assets > 0.0 and total_acceptable_equity >0.0:
+                payment = total_assets * random.uniform(0.2, 0.7) - total_acceptable_equity
+                # Transfer equity between households representing expense or income from transaction
+                equity_tranx = {"type_": "equity", "from_" : self.identifier, "to" : to_household, "amount" : payment, "time" : time}
+                environment.new_transaction(type_=equity_tranx["type_"], asset='', from_=equity_tranx["to"], to=equity_tranx["from_"], amount=equity_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1) 
+                print(f"{self.identifier} transferred {payment} units of equity to {to_household} at time {time}.")
                 # Payment to household that is a customer of a different bank
                 # Prefernce for CBDC transactions
                 if to_bank_acc != bank_acc:
@@ -282,6 +289,7 @@ class Household(BaseAgent):
                         self.cbdc_payment(environment, tranx, time)
                         environment.cbdc_payments += payment
                         environment.total_payments += payment
+                        
                     # If payment shock greater than CBDC balance, all CBDC paid and remainder paid with deposits
                     elif payment > self.get_account("cbdc"):
                         if payment < (self.get_account("cbdc") + self.get_account("bank_notes")):
@@ -295,6 +303,7 @@ class Household(BaseAgent):
                             tranx_bank_notes = {"type_": "bank_notes", "from_" : self.identifier, "bank_from": bank_acc, "to" : to_household, "bank_to" : to_bank_acc, "amount" : amount_remainder, "time" : time}
                             self.bank_notes_payment(environment, tranx_bank_notes, time)
                             environment.total_payments += payment
+
                         elif payment > (self.get_account("cbdc") + self.get_account("bank_notes")):
                             # CBDC portion
                             cbdc_portion = self.get_account("cbdc")
