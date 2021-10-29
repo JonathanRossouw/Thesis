@@ -164,62 +164,37 @@ class Measurement(BaseMeasurement):
     # Wrapper for functions returning the desired values to be written
     # -------------------------------------------------------------------------
     def wrapper(self, ident):
-        dep_balance = 0
+        deposits_balance = 0
         cbdc_balance = 0
-        for household in self.environment.households:
-            dep_balance += household.get_account("deposits")
-            cbdc_balance += household.get_account("cbdc")
+        for tranx in self.environment.central_bank[0].accounts:
+            if tranx.type_ == "cbdc":
+                cbdc_balance += tranx.amount
 
-        batch = 0
-        banks_ids = []
         for banks in self.environment.banks:
-            batch += banks.get_account("batch")
-            banks_ids.append(banks.identifier)
-        
-        if ident == "dep_balance":
-            return dep_balance
+            for tranx in banks.accounts:
+                if tranx.type_ == "deposits":
+                    deposits_balance += tranx.amount
 
-        if ident == "cbdc_balance":
-            return cbdc_balance
+        gdp = 0
+        for firm in self.environment.firms:
+            gdp += firm.get_account("output_agreement")
+        for house in self.environment.households:
+            gdp += house.get_account("wage_agreement")
 
         if ident == "current_step":
             return self.runner.current_step+1
-    
-        if ident == "bank_0":
-            if ident in banks_ids:
-                return self.environment.get_agent_by_id(ident).get_account("deposits")
-
-        if ident == "bank_1":
-            if ident in banks_ids:
-                return self.environment.get_agent_by_id(ident).get_account("deposits")
-
-        if ident == "bank_2":
-            if ident in banks_ids:
-                return self.environment.get_agent_by_id(ident).get_account("deposits")
-
-        if ident == "bank_3":
-            if ident in banks_ids:
-                return self.environment.get_agent_by_id(ident).get_account("deposits")
-
-        if ident == "bank_4":
-            if ident in banks_ids:
-                return self.environment.get_agent_by_id(ident).get_account("deposits")
-
-        if ident == "deposits_payments":
-            return self.environment.deposits_payments
-
-        if ident == "cbdc_payments":
-            return self.environment.cbdc_payments
-
-        if ident == "total_payments":
-            return self.environment.total_payments
-
-        if ident == "total_batch":
-            return batch
             
         if ident == "total_output":
             return self.environment.total_output
 
+        if ident == "deposits_payments":
+            return deposits_balance
+
+        if ident == "cbdc_payments":
+            return cbdc_balance
+
+        if ident == "total_payments":
+            return gdp
 
 
     # -------------------------------------------------------------------------

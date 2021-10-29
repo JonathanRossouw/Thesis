@@ -130,6 +130,38 @@ class CentralBank(BaseAgent):
     # takes in transaction details from household and makes payment
     # -------------------------------------------------------------------------
     def make_cbdc_payment(self, environment, tranx, time):
+        # Extract Transaction Information for Dash Board
+        import datetime
+        year,julian = [2021,time]
+        date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
+
+        Timestamp = str(date_time.date()) + "-1200"
+
+        pk = str(len(environment.cbdc_transactions) + 1)
+        sender = tranx["from_"].replace("_","").upper()
+        receiver = tranx["to"].replace("_","").upper()
+        if "house" in tranx["from_"]:
+            SenderAccountTypeCode = "1"
+        elif "firm" in tranx["from_"]:
+            SenderAccountTypeCode = "2"
+        elif "bank" in tranx["from_"]:
+            SenderAccountTypeCode = "3"
+        elif "central" in tranx["from_"]:
+            SenderAccountTypeCode = "5"
+
+        if "house" in tranx["to"]:
+            ReceiverAccountTypeCode = "1"
+        elif "firm" in tranx["to"]:
+            ReceiverAccountTypeCode = "2"
+        elif "bank" in tranx["to"]:
+            ReceiverAccountTypeCode = "3"
+        elif "central" in tranx["to"]:
+            ReceiverAccountTypeCode = "5"
+
+        cbdc_tranx = {"pk":pk, "fields":{"Sender":sender, "Receiver": receiver, "SenderAccountTypeCode":SenderAccountTypeCode, "ReceiverAccountTypeCode":ReceiverAccountTypeCode, "Amount":tranx["amount"],"InstrumentTypeCode":"5", "Timestamp":Timestamp}}
+
+        environment.cbdc_transactions.append(cbdc_tranx)
+
 		# Transfer funds from household to central bank to household
         environment.new_transaction(type_="cbdc", asset='', from_=tranx["from_"], to="central_bank", amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         # Transfer funds from central bank to household
@@ -175,6 +207,38 @@ class CentralBank(BaseAgent):
     # Household exchanges deposits at bank for cbdc at central bank
     # -------------------------------------------------------------------------
     def cbdc_settle(self, environment, tranx, time):
+        # Extract Transaction Information for Dash Board
+        import datetime
+        year,julian = [2021,time]
+        date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
+
+        Timestamp = str(date_time.date()) + "-1200"
+        
+        pk = str(len(environment.cbdc_transactions) + 1)
+        sender = tranx["from_"].replace("_","").upper()
+        receiver = tranx["to"].replace("_","").upper()
+        if "house" in tranx["from_"]:
+            SenderAccountTypeCode = "1"
+        elif "firm" in tranx["from_"]:
+            SenderAccountTypeCode = "2"
+        elif "bank" in tranx["from_"]:
+            SenderAccountTypeCode = "3"
+        elif "central" in tranx["from_"]:
+            SenderAccountTypeCode = "5"
+
+        if "house" in tranx["to"]:
+            ReceiverAccountTypeCode = "1"
+        elif "firm" in tranx["to"]:
+            ReceiverAccountTypeCode = "2"
+        elif "bank" in tranx["to"]:
+            ReceiverAccountTypeCode = "3"
+        elif "central" in tranx["to"]:
+            ReceiverAccountTypeCode = "5"
+
+        cbdc_tranx = {"pk":pk, "fields":{"Sender":sender, "Receiver": receiver, "SenderAccountTypeCode":SenderAccountTypeCode, "ReceiverAccountTypeCode":ReceiverAccountTypeCode, "Amount":tranx["amount"],"InstrumentTypeCode":"5", "Timestamp":Timestamp}}
+
+        environment.cbdc_transactions.append(cbdc_tranx)
+
         if tranx["to"] is "central_bank":
             # Transfer CBDC to Agent
             environment.new_transaction(type_="cbdc", asset='', from_=tranx["bank_to"], to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)

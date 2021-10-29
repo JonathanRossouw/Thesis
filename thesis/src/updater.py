@@ -21,6 +21,8 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 from abm_template.src.basemodel import BaseModel
 import random
 import logging
+import datetime
+import numpy as np
 from src.transaction import Transaction
 from src.network import Network
 from src.market import Market
@@ -93,6 +95,8 @@ class Updater(BaseModel):
         self.do_ration_output(environment, time)
         self.net_settle(environment, time)
         self.payment_shock(environment, time)
+        self.net_settle(environment, time)
+        self.firms_repay_loans(environment, time)
         self.net_settle(environment, time)
         # The households sell labour to firms
         #self.sell_labour(environment, time)
@@ -192,22 +196,27 @@ class Updater(BaseModel):
     #  of deposits to a random household that shares an edge.
     # -------------------------------------------------------------------------
     def payment_shock(self, environment, time):
-        if time > 0:
-            import networkx as nx
-            import numpy as np
+        # Set Date Time from time
+        year,julian = [2021,time]
+        date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
+        # Year Month Day
+        year = int(date_time.strftime("%y"))
+        month = int(date_time.strftime("%m"))
+        day = date_time.strftime("%d")
+        # Find last day of month
+        end_day = (datetime.date(year + int(month/12), month%12+1, 1) -datetime.timedelta(days=1)).strftime("%d")
+        if time > 0 and day != end_day and day != 1:
             # Set G as the network
             G = environment.social_network
             # Loop through nodes in the network
             for house in G.nodes:
                 # For each node randomly select whether experiences a shock using 
                 # a random bernoulli variable with p = 0.6
-                shock = np.random.binomial(1, 0.6, 1)
+                shock = np.random.binomial(1, 0.2, 1)
                 # Shock is selected in bernoulli variable equals 1
                 if shock[0] == 1:
                     # Initialize network class instance
                     environment.get_agent_by_id(house).initiate_payment(environment, time)
-                    # Make payment using network class method   
-                    print("PAYMENT SHOCK!!!")
     # -------------------------------------------------------------------------    
 
     # -------------------------------------------------------------------------
@@ -218,27 +227,98 @@ class Updater(BaseModel):
     # cancelled out.
     # -------------------------------------------------------------------------
     def initiate_production(self, environment, time):
+        # Set Date Time from time
+        year,julian = [2021,time]
+        date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
+        # Year Month Day
+        year = int(date_time.strftime("%y"))
+        month = int(date_time.strftime("%m"))
+        day = date_time.strftime("%d")
+        # Find last day of month
+        end_day = (datetime.date(year + int(month/12), month%12+1, 1) -datetime.timedelta(days=1)).strftime("%d")
+        # Production on the first of the month
         if time > 0:
-            G = environment.employment_network
-            # Loop through firms in the network and initiate production
-            for u in G.nodes(data=False):
-                agent = environment.get_agent_by_id(u)
-                if agent in environment.firms:
-                    agent.production(environment, time)
+            if day == "01":
+                G = environment.employment_network
+                # Loop through firms in the network and initiate production
+                for u in G.nodes(data=False):
+                    agent = environment.get_agent_by_id(u)
+                    if agent in environment.firms:
+                        agent.production(environment, time)
+                        print(f"\n PRODUCTION {agent.identifier}!!! \n")
+
+            # Wages on the 25th of the month
+            if (int(day) % 25) == 0:
+                environment.sweep_cbdc_payments = 0
+                G = environment.employment_network
+                # Loop through firms in the network and pay wages
+                for u in G.nodes(data=False):
+                    agent = environment.get_agent_by_id(u)
+                    if agent in environment.firms:
+                        agent.production_wage(environment, time)
+                        print(f"\n PAID WAGES {agent.identifier}!!! \n")
+                        
     # ------------------------------------------------------------------------- 
 
     # -------------------------------------------------------------------------
-    # do_ration_output(self, environment)
+    # firms_repay_loans(self, environment, time)
+    # Loop through firms and repay loans to banks
+    # -------------------------------------------------------------------------
+    def firms_repay_loans(self, environment, time):
+        # Set Date Time from time
+        year,julian = [2021,time]
+        date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
+        # Year Month Day
+        year = int(date_time.strftime("%y"))
+        month = int(date_time.strftime("%m"))
+        day = date_time.strftime("%d")
+        # Find last day of month
+        end_day = (datetime.date(year + int(month/12), month%12+1, 1) -datetime.timedelta(days=1)).strftime("%d")
+        # Production on the first of the month
+        if time > 0:
+        # Repay loans and contracts expire on the last day of the month
+            if end_day == day:
+                environment.sweep_cbdc_payments = 0
+                G = environment.employment_network
+                # Loop through firms in the network and repay loans
+                for u in G.nodes(data=False):
+                    agent = environment.get_agent_by_id(u)
+                    if agent in environment.firms:
+                        agent.production_repay_loan(environment, time)
+                        print(f"\n REPAY LOANS {agent.identifier}!!! \n")
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # do_ration_output(self, environment, time)
     # Loop through nodes in consumption network and ration output for each 
     # household and all firms
     # -------------------------------------------------------------------------
     def do_ration_output(self, environment, time):
+        # Set Date Time from time
+        year,julian = [2021,time]
+        date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
+        # Year Month Day
+        year = int(date_time.strftime("%y"))
+        month = int(date_time.strftime("%m"))
+        day = date_time.strftime("%d")
+        # Find last day of month
+        end_day = (datetime.date(year + int(month/12), month%12+1, 1) -datetime.timedelta(days=1)).strftime("%d")
+        # Production on the first of the month
+        mark = Market(environment)
+        G = environment.consumption_network
         if time > 0:
-            mark = Market(environment)
-            G = environment.consumption_network
-            for node in list(G.nodes(data=True)):
-                if node[1]["id"] == "household":
-                    mark.output_rationing(environment, node, time)
+            if day != end_day:
+                for node in list(G.nodes(data=True)):
+                    if node[1]["id"] == "household":
+                        shock = np.random.binomial(1, 0.6, 1)
+                        # Shock is selected in bernoulli variable equals 1
+                        if shock[0] == 1:
+                            mark.output_rationing(environment, node, time)
+                            print(f"\n RATION OUTPUT!!! \n")
+            elif day == end_day:
+                for node in list(G.nodes(data=True)):
+                    if node[1]["id"] == "household":
+                        mark.output_rationing(environment, node, time)
     # -------------------------------------------------------------------------
  
 
@@ -253,6 +333,4 @@ class Updater(BaseModel):
         # Iteratre through stored transactions
         for bank_trans in environment.banks[:]:
             bank_trans.interbank_settle(environment, time)
-            #settlement = Network(environment)
-            #settlement.net_settle_transaction(environment, bank_trans, time)
     # -------------------------------------------------------------------------

@@ -61,7 +61,7 @@ class Generate_Agents:
 	# generate xml files for households each randomly assigned to a bank
     # -------------------------------------------------------------------------
 	def generate_households(self, numHouseholds, householdfileName):
-		import random
+		import numpy as np
 		# Read in number of households, number of banks, and name of directory to store households
 		self.numHouseholds = int(numHouseholds)
 		self.householdfileName = householdfileName
@@ -72,12 +72,12 @@ class Generate_Agents:
 			# the following code ensures leading zeros so filenames will be in the right order
 			# for python to read in. Also, bank names are sorted properly in activeBanks of madfimas
 			# this code is ugly, but works...
-			labour = 100 #random.sample((50.0, 100.0), 1)[0]
+			labour = round((4000 * np.random.normal(1, 0.2, 1))[0], 3)
 			householdfileName += ".xml"
 			outFile = open(householdfileName,  'w')
 			text = "<?xml version='1.0' encoding='UTF-8'?>\n"
 			text = text + "<household identifier= '" + identifier + "'>\n"
-			text = text + "    <parameter name='equity' value='20.00'></parameter>\n"
+			text = text + "    <parameter name='equity' value='" + str(labour) + "'></parameter>\n"
 			text = text + "    <parameter name='labour' value='" + str(labour) + "'></parameter>\n"
 			text = text + "    <parameter name='propensity_to_save' value='0.4'></parameter>\n"
 			text = text + "</household>\n"
@@ -105,7 +105,7 @@ class Generate_Agents:
 			outFile = open(firmfileName,  'w')
 			text = "<?xml version='1.0' encoding='UTF-8'?>\n"
 			text = text + "<firm identifier= '" + identifier + "'>\n"
-			text = text + "    <parameter name='endowment' value='30.00'></parameter>\n"
+			text = text + "    <parameter name='endowment' value='30000'></parameter>\n"
 			text = text + "    <parameter name='propensity_to_save' value='0.4'></parameter>\n"
 			text = text + "</firm>\n"
 			outFile.write(text)

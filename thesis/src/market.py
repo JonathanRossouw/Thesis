@@ -106,19 +106,40 @@ class Market(BaseMarket):
     # ration demand and supply for output per household and all firms
     # -------------------------------------------------------------------------
     def output_rationing(self, environment, node, time):
+        # Set Date Time from time
+        import datetime
+        year,julian = [2021,time]
+        date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
+        # Year Month Day
+        year = int(date_time.strftime("%y"))
+        month = int(date_time.strftime("%m"))
+        day = date_time.strftime("%d")
+        # Find last day of month
+        end_day = (datetime.date(year + int(month/12), month%12+1, 1) -datetime.timedelta(days=1)).strftime("%d")
+        import numpy as np
         G = environment.consumption_network
         house = environment.get_agent_by_id(node[0])
         print(f"{house.identifier} {house.supply}")
-        #if house.supply != 0:
-        agents = [[node[0], house.supply]]
-        for u in list(G.adj[node[0]]):
-            firm = environment.get_agent_by_id(u)
-            print(f"{firm.identifier} {firm.supply}")
-            agents.append([u, firm.supply])
-        for rationing_schedule in self.rationing(agents):
-            environment.get_agent_by_id(rationing_schedule[0]).supply -= rationing_schedule[2]
-            environment.get_agent_by_id(rationing_schedule[1]).supply += rationing_schedule[2]
-            print(f"{rationing_schedule[2]} of output transferred from {rationing_schedule[0]} to {rationing_schedule[1]} at time {time}")
+        if end_day == day:
+            agents = [[node[0], house.supply]]
+            for u in list(G.adj[node[0]]):
+                firm = environment.get_agent_by_id(u)
+                print(f"{firm.identifier} {firm.supply}")
+                agents.append([u, firm.supply])
+            for rationing_schedule in self.rationing(agents):
+                environment.get_agent_by_id(rationing_schedule[0]).production_sell(environment, rationing_schedule, time)
+
+        else:
+            house_demand = -((house.get_account("output_agreement")/30)/0.6) * np.random.normal(1, 1, 1)
+            if house_demand < 0 and abs(house_demand) < abs(house.supply) and abs(house_demand) < (house.get_account("deposits") + house.get_account("cbdc")):
+                agents = [[node[0], house_demand[0]]]
+                for u in list(G.adj[node[0]]):
+                    firm = environment.get_agent_by_id(u)
+                    print(f"{firm.identifier} {firm.supply}")
+                    agents.append([u, firm.supply])
+                for rationing_schedule in self.rationing(agents):
+                    environment.get_agent_by_id(rationing_schedule[0]).production_sell(environment, rationing_schedule, time)
+                    print(f"\n \n {rationing_schedule} \n \n ")
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

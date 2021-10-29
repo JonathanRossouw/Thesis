@@ -49,6 +49,8 @@ class Environment(BaseConfig):
     total_payments = 0 # Measurement of total activity
     total_output = 0 # Measurement of total output
 
+    cbdc_transactions = []
+
     # Frequency of batching
     batch = 0
 
@@ -263,6 +265,9 @@ class Environment(BaseConfig):
         self.static_parameters["batch"] = 0
         self.variable_parameters = {}
         self.network = nx.DiGraph()
+
+        # Store CBDC Transactions for Dash Board
+        self.cbdc_transactions = []
 
         # first, read in the environment file
         environment_filename = environment_directory + identifier + ".xml"

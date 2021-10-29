@@ -282,7 +282,7 @@ class Bank(BaseAgent):
     # Household exchanges deposits at bank for cbdc at central bank
     # -------------------------------------------------------------------------
     def cbdc_exchange(self, environment, tranx, time):
-        if tranx["to"] is "central_bank":
+        if tranx["to"] == "central_bank":
             # Decrease Deposits for household
             environment.new_transaction(type_="deposits", asset='', from_=tranx["from_"], to=tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
             # Call Central Bank method to transfer Open Market Operations to Central Bank, CBDC to Household, Open Market

@@ -1,5 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<firm identifier= 'firm_5'>
-    <parameter name='endowment' value='30.00'></parameter>
-    <parameter name='propensity_to_save' value='0.4'></parameter>
-</firm>

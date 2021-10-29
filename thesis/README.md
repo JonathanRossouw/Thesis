@@ -6,7 +6,11 @@
 - Open Jupyter Notebook
 - Open thesis_example.ipynb
 - Change kernel to venv
-- Run all.
+- Set number of Households, Firms and Banks in parameter_values tuple
+- Set number of sweeps equal to total number of days for desired number of months plus 1 (January: 32, February: 60, ..., Year: 366)
+- Run all cells
+- Output saves figure Deposits_CBDC_Payments.png of the contribution to "GDP" over the year for both deposits and CBDC
+- Output saves a json cbdc_dict.json for all the CBDC transactions
 
 
 ## Description of Code
