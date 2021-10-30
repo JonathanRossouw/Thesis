@@ -2,15 +2,32 @@
 
 ## How to run code
 
+### Option 1
+
 - Access repo in command line or terminal
 - Open Jupyter Notebook
-- Open thesis_example.ipynb
+- Open CBDC_sim.ipynb
 - Change kernel to venv
 - Set number of Households, Firms and Banks in parameter_values tuple
 - Set number of sweeps equal to total number of days for desired number of months plus 1 (January: 32, February: 60, ..., Year: 366)
 - Run all cells
-- Output saves figure Deposits_CBDC_Payments.png of the contribution to "GDP" over the year for both deposits and CBDC
-- Output saves a json cbdc_dict.json for all the CBDC transactions
+- Output saves figures for the contribution to "GDP" over the year for both deposits and CBDC and for all networks.
+
+### Option 2
+
+- Access repo in command line or terminal
+- Open Jupyter Notebook
+- Open CBDC_init.ipynb
+- Change kernel to venv
+- Set number of Households, Firms and Banks in parameter_values tuple
+- Set number of sweeps equal to total number of days for desired number of months plus 1 (January: 32, February: 60, ..., Year: 366)
+- Run all cells to initialize simulation
+- Access Thesis folder from command line
+- Source virtual environment (source venv/bin/activate)
+- Open thesis folder
+- Run simulation ("python3.9 sim_script.py 'environments/' 'CBDC_parameters' 'log/")
+- Open CBDC_analyze.ipynb in Jupyter Notebook
+- Run All to view analysis
 
 
 ## Description of Code

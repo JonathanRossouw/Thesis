@@ -43,6 +43,7 @@ class CentralBank(BaseAgent):
     accounts = []  # all accounts of the central bank (filled with transactions)
     assets = []
     liabilities = []
+    pk = 0
 
     #
     #
@@ -111,6 +112,7 @@ class CentralBank(BaseAgent):
         self.parameters["interest_rate_cb_loans"] = 0.0  # interest rate on loans
         self.assets = ["open_market_operations"]
         self.liabilities = ["reserves", "cbdc", "bank_notes"]
+        self.pk = 0
     # -------------------------------------------------------------------------
 
 
@@ -137,7 +139,7 @@ class CentralBank(BaseAgent):
 
         Timestamp = str(date_time.date()) + "-1200"
 
-        pk = str(len(environment.cbdc_transactions) + 1)
+        self.pk += 1
         sender = tranx["from_"].replace("_","").upper()
         receiver = tranx["to"].replace("_","").upper()
         if "house" in tranx["from_"]:
@@ -158,7 +160,7 @@ class CentralBank(BaseAgent):
         elif "central" in tranx["to"]:
             ReceiverAccountTypeCode = "5"
 
-        cbdc_tranx = {"pk":pk, "fields":{"Sender":sender, "Receiver": receiver, "SenderAccountTypeCode":SenderAccountTypeCode, "ReceiverAccountTypeCode":ReceiverAccountTypeCode, "Amount":tranx["amount"],"InstrumentTypeCode":"5", "Timestamp":Timestamp}}
+        cbdc_tranx = {"pk":self.pk, "fields":{"Sender":sender, "Receiver": receiver, "SenderAccountTypeCode":SenderAccountTypeCode, "ReceiverAccountTypeCode":ReceiverAccountTypeCode, "Amount":round(tranx["amount"], 3),"InstrumentTypeCode":"5", "Timestamp":Timestamp}}
 
         environment.cbdc_transactions.append(cbdc_tranx)
 
@@ -167,9 +169,9 @@ class CentralBank(BaseAgent):
         # Transfer funds from central bank to household
         environment.new_transaction(type_="cbdc", asset='', from_="central_bank", to=tranx["to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
 		# We print the action of selling to the screen
-        print(f"{tranx['from_']}s paid {tranx['amount']}f of cbdc to {'central_bank'}s for {tranx['to']}s at time {tranx['time']}d.")
-        print(f"{'central_bank'}s settled {tranx['amount']}f of cbdc to {tranx['to']}s at time {tranx['time']}d.")
-        print(self.balance_sheet())
+        print(f"\n{tranx['from_']}s paid {tranx['amount']}f of cbdc to {'central_bank'}s for {tranx['to']}s at time {tranx['time']}d.")
+        print(f"\n{'central_bank'}s settled {tranx['amount']}f of cbdc to {tranx['to']}s at time {tranx['time']}d.")
+        #print(self.balance_sheet())
         #logging.info("  payments made on step: %s",  time)
     # -------------------------------------------------------------------------
 
@@ -183,9 +185,9 @@ class CentralBank(BaseAgent):
         # Transfer funds from central bank to household
         environment.new_transaction(type_="bank_notes", asset='', from_="central_bank", to=tranx["to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
 		# We print the action of selling to the screen
-        print(f"{tranx['from_']}s paid {tranx['amount']}f of cbdc to {self.identifier}s for {tranx['to']}s at time {tranx['time']}d.")
-        print(f"{self.identifier}s settled {tranx['amount']}f of cbdc to {tranx['to']}s at time {tranx['time']}d.")
-        print(self.balance_sheet())
+        print(f"\n{tranx['from_']}s paid {tranx['amount']}f of cbdc to {self.identifier}s for {tranx['to']}s at time {tranx['time']}d.")
+        print(f"\n{self.identifier}s settled {tranx['amount']}f of cbdc to {tranx['to']}s at time {tranx['time']}d.")
+        #print(self.balance_sheet())
         #logging.info("  payments made on step: %s",  time)
     # -------------------------------------------------------------------------
 
@@ -197,8 +199,8 @@ class CentralBank(BaseAgent):
 		# Transfer funds from central bank to bank
         environment.new_transaction(type_="reserves", asset='', from_=tranx["bank_from"], to=tranx["bank_to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         environment.get_agent_by_id(tranx["bank_to"]).settle_payment(environment, tranx, time)
-        print(f"{self.identifier} RTGSed {tranx['amount']} of reserves to {tranx['bank_to']} at time {tranx['time']}d.")
-        print(self.balance_sheet())
+        print(f"\n {self.identifier} RTGSed {tranx['amount']} of reserves to {tranx['bank_to']} at time {tranx['time']}d.")
+        #print(self.balance_sheet())
         #logging.info("  payments made on step: %s",  time)
     # -------------------------------------------------------------------------
 
@@ -214,7 +216,7 @@ class CentralBank(BaseAgent):
 
         Timestamp = str(date_time.date()) + "-1200"
         
-        pk = str(len(environment.cbdc_transactions) + 1)
+        self.pk += 1
         sender = tranx["from_"].replace("_","").upper()
         receiver = tranx["to"].replace("_","").upper()
         if "house" in tranx["from_"]:
@@ -235,7 +237,7 @@ class CentralBank(BaseAgent):
         elif "central" in tranx["to"]:
             ReceiverAccountTypeCode = "5"
 
-        cbdc_tranx = {"pk":pk, "fields":{"Sender":sender, "Receiver": receiver, "SenderAccountTypeCode":SenderAccountTypeCode, "ReceiverAccountTypeCode":ReceiverAccountTypeCode, "Amount":tranx["amount"],"InstrumentTypeCode":"5", "Timestamp":Timestamp}}
+        cbdc_tranx = {"pk":self.pk, "fields":{"Sender":sender, "Receiver": receiver, "SenderAccountTypeCode":SenderAccountTypeCode, "ReceiverAccountTypeCode":ReceiverAccountTypeCode, "Amount":round(tranx["amount"], 3),"InstrumentTypeCode":"5", "Timestamp":Timestamp}}
 
         environment.cbdc_transactions.append(cbdc_tranx)
 
@@ -244,15 +246,15 @@ class CentralBank(BaseAgent):
             environment.new_transaction(type_="cbdc", asset='', from_=tranx["bank_to"], to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
             # Transfer Open Market Operations to Bank
             environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to=tranx["bank_to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-            print(f"CBDC settlement of {tranx['amount']} to {tranx['from_']} complete")
-            print(self.balance_sheet())
+            print(f"\nCBDC settlement of {tranx['amount']} to {tranx['from_']} complete")
+            #print(self.balance_sheet())
         elif tranx["to"] != "central_bank":
             # Transfer CBDC from Agent to Central Bank
             environment.new_transaction(type_="cbdc", asset='', from_=tranx["to"], to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
             # Transfer Open Market Operations from Bank to Central Bank
             environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to=tranx["bank_to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-            print(f"CBDC settlement of {tranx['amount']} to {tranx['from_']} complete")
-            print(self.balance_sheet())
+            print(f"\nCBDC settlement of {tranx['amount']} to {tranx['from_']} complete")
+            #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
 
@@ -266,8 +268,8 @@ class CentralBank(BaseAgent):
         # Transfer Open Market Operations to Bank
         environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to="central_bank", amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         # Increase Bank Reserves equal to increase Open Market Operations agreement
-        print(f"Bank Notes settlement of {tranx['amount']} to {tranx['from_']} complete")
-        print(self.balance_sheet())
+        print(f"\n Bank Notes settlement of {tranx['amount']} to {tranx['from_']} complete")
+        #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
 

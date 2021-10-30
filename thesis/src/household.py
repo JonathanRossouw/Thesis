@@ -190,12 +190,12 @@ class Household(BaseAgent):
         # Capitalize banks
         equity_bank_tranx = {"type_": "capital_bank", "from_" : bank_acc, "bank_from": bank_acc, "to" : self.identifier, "bank_to" : bank_acc, "amount" : self.equity/2, "time" : time}
         environment.get_agent_by_id(bank_acc).bank_capitalize(environment, equity_bank_tranx, time)
-        print(self.balance_sheet())
+        #print(self.balance_sheet())
         # Create Loan Account at Bank
         loan_amount = self.labour + self.equity
         loan_tranx = {"type_": "loans", "from_" : self.identifier, "bank_from": bank_acc, "to" : bank_acc, "bank_to" : bank_acc, "amount" : loan_amount, "time" : time}
         environment.get_agent_by_id(bank_acc).new_loan(environment, loan_tranx)
-        print(self.balance_sheet())
+        #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
 
@@ -221,8 +221,8 @@ class Household(BaseAgent):
         # Create Bank_notes at Central Bank
         bank_notes_allocation = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : "central_bank", "bank_to" : "central_bank", "amount" : bank_notes, "time" : time}
         environment.get_agent_by_id(bank_acc).bank_notes_purchase(environment, bank_notes_allocation, time)
-        print(f"{self.identifier} chose {deposits} deposits, {cbdc} cbdc, and {bank_notes} bank_notes")
-        print(self.balance_sheet())
+        print(f"\n{self.identifier} chose {deposits} deposits, {cbdc} cbdc, and {bank_notes} bank_notes")
+        #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -282,7 +282,7 @@ class Household(BaseAgent):
                     # Transfer equity between households representing expense or income from transaction
                     equity_tranx = {"type_": "equity", "from_" : self.identifier, "to" : to_household, "amount" : payment, "time" : time}
                     environment.new_transaction(type_=equity_tranx["type_"], asset='', from_=equity_tranx["to"], to=equity_tranx["from_"], amount=equity_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1) 
-                    print(f"{self.identifier} transferred {payment} units of equity to {to_household} at time {time}.")
+                    print(f"\n{self.identifier} transferred {payment} units of equity to {to_household} at time {time}.")
                     # Payment to household in Deposits
                     deposit_portion = payment * self.asset_prop["deposits"]
                     tranx_deposits = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : to_household, "bank_to" : to_bank_acc, "amount" : deposit_portion, "time" : time}

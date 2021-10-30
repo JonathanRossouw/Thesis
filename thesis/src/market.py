@@ -119,12 +119,12 @@ class Market(BaseMarket):
         import numpy as np
         G = environment.consumption_network
         house = environment.get_agent_by_id(node[0])
-        print(f"{house.identifier} {house.supply}")
+        #print(f"{house.identifier} {house.supply}")
         if end_day == day:
             agents = [[node[0], house.supply]]
             for u in list(G.adj[node[0]]):
                 firm = environment.get_agent_by_id(u)
-                print(f"{firm.identifier} {firm.supply}")
+                #print(f"{firm.identifier} {firm.supply}")
                 agents.append([u, firm.supply])
             for rationing_schedule in self.rationing(agents):
                 environment.get_agent_by_id(rationing_schedule[0]).production_sell(environment, rationing_schedule, time)
@@ -135,11 +135,11 @@ class Market(BaseMarket):
                 agents = [[node[0], house_demand[0]]]
                 for u in list(G.adj[node[0]]):
                     firm = environment.get_agent_by_id(u)
-                    print(f"{firm.identifier} {firm.supply}")
+                    #print(f"{firm.identifier} {firm.supply}")
                     agents.append([u, firm.supply])
                 for rationing_schedule in self.rationing(agents):
                     environment.get_agent_by_id(rationing_schedule[0]).production_sell(environment, rationing_schedule, time)
-                    print(f"\n \n {rationing_schedule} \n \n ")
+                    #print(f"\n \n {rationing_schedule} \n \n ")
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

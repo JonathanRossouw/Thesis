@@ -163,10 +163,10 @@ class Bank(BaseAgent):
         firm_acc = list(environment.employment_network.adj[tranx["to"]])[0]
         # Provide Loan to firm where household providing capital works
         environment.new_transaction(type_="loans", asset='', from_= firm_acc, to = self.identifier, amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        print(f"{tranx['amount']} new loan from {self.identifier} to {firm_acc} for capitalizing bank")
+        print(f"\n{tranx['amount']} new loan from {self.identifier} to {firm_acc} for capitalizing bank")
         # Firm purchases fixed assets
         environment.new_transaction(type_="fixed_assets", asset='', from_= firm_acc, to = firm_acc, amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        print(self.balance_sheet())
+        #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -178,8 +178,8 @@ class Bank(BaseAgent):
         environment.new_transaction(type_="loans", asset='', from_= loan_tranx["from_"], to = loan_tranx["bank_from"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         # Open deposit account for household at bank
         environment.new_transaction(type_="deposits", asset='', from_= loan_tranx["bank_from"], to = loan_tranx["from_"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        print(f"{loan_tranx['from_']} took out new loan of {loan_tranx['amount']} at {loan_tranx['bank_from']}")
-        print(self.balance_sheet())
+        print(f"\n{loan_tranx['from_']} took out new loan of {loan_tranx['amount']} at {loan_tranx['bank_from']}")
+        #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -191,8 +191,8 @@ class Bank(BaseAgent):
         environment.new_transaction(type_="loans", asset='', from_= loan_tranx["bank_from"], to = loan_tranx["from_"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         # Open deposit account for household at bank
         environment.new_transaction(type_="deposits", asset='', from_= loan_tranx["from_"], to = loan_tranx["bank_from"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        print(f"{loan_tranx['from_']} repaid loan of {loan_tranx['amount']} at {loan_tranx['bank_from']}")
-        print(self.balance_sheet())
+        print(f"\n{loan_tranx['from_']} repaid loan of {loan_tranx['amount']} at {loan_tranx['bank_from']}")
+        #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
 
@@ -207,8 +207,8 @@ class Bank(BaseAgent):
         reserves_required = 0.2 * self.get_account("deposits")
         reserves_allocation = {"type_": "reserves", "from_": "central_bank", "to": self.identifier, "amount": reserves_required}
         environment.get_agent_by_id("central_bank").new_reserves(environment, reserves_allocation)
-        print(f"{self.identifier} has {reserves_required} reserves, and {reserves_required} Open Market Operations")
-        print(self.balance_sheet())
+        print(f"\n{self.identifier} has {reserves_required} reserves, and {reserves_required} Open Market Operations")
+        #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -221,8 +221,8 @@ class Bank(BaseAgent):
 		# Transfer funds from bank to household
         environment.new_transaction(type_="deposits", asset='', from_=tranx["from_"], to=tranx["bank_from"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
 		# We print the action of transferring deposits to batch
-        print(f"{tranx['from_']}s paid {tranx['amount']} to {tranx['bank_from']} for {tranx['to']} at time {tranx['time']}.")
-        print(self.balance_sheet())
+        print(f"\n{tranx['from_']}s paid {tranx['amount']} to {tranx['bank_from']} for {tranx['to']} at time {tranx['time']}.")
+        #print(self.balance_sheet())
         #logging.info("  payments made on step: %s",  time)
     # -------------------------------------------------------------------------
 
@@ -235,7 +235,7 @@ class Bank(BaseAgent):
         # Take in transaction details and transfer amount to deposits of household
         environment.new_transaction(type_="deposits", asset='', from_= self.identifier, to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         print(f"{tranx['bank_to']} settled payment of {tranx['amount']} to {tranx['to']} at time {time}.")
-        print(self.balance_sheet())
+        #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
 
@@ -256,8 +256,8 @@ class Bank(BaseAgent):
 				# Remove stored transaction
                 self.store.remove(tranx)
 				# Print details of transaction
-                print(f"{tranx['bank_from']}s transferred deposits of {tranx['amount']}f to {tranx['to']}s at time {time}d.")
-                print(self.balance_sheet())
+                print(f"\n{tranx['bank_from']}s transferred deposits of {tranx['amount']}f to {tranx['to']}s at time {time}d.")
+                #print(self.balance_sheet())
 			
 			# Batch payments for transactions between customers of bank with households
             # that are customers of different bank and settle every fourth period
@@ -272,9 +272,8 @@ class Bank(BaseAgent):
 				# Remove stored transaction
                 self.store.remove(tranx)
 				# Print details of transaction
-                print(f"{tranx['bank_from']}s RTGSed reserves of {tranx['amount']}f  to {'central_bank'}s at time {time}d.")
-                print(self.balance_sheet())
-		# Print number of stored transactions
+                print(f"\n{tranx['bank_from']}s RTGSed reserves of {tranx['amount']}f  to {'central_bank'}s at time {time}d.")
+                #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

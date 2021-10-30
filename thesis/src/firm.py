@@ -178,7 +178,7 @@ class Firm(BaseAgent):
         # Capitalize firm, provide household with equity and purchase fixed assets
         environment.new_transaction(type_=tranx["type_"], asset='', from_= tranx["from_"], to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         environment.new_transaction(type_="fixed_assets", asset='', from_= self.identifier, to = self.identifier, amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        print(self.balance_sheet())
+        #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -213,8 +213,8 @@ class Firm(BaseAgent):
         # Create Bank_notes at Central Bank
         bank_notes_allocation = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : "central_bank", "bank_to" : "central_bank", "amount" : bank_notes, "time" : time}
         environment.get_agent_by_id(bank_acc).bank_notes_purchase(environment, bank_notes_allocation, time)
-        print(f"{self.identifier} chose {deposits} deposits, {cbdc} cbdc, and {bank_notes} bank_notes")
-        print(self.balance_sheet())
+        print(f"\n{self.identifier} chose {deposits} deposits, {cbdc} cbdc, and {bank_notes} bank_notes")
+        #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -251,7 +251,7 @@ class Firm(BaseAgent):
         for id_ in households:
             house = environment.get_agent_by_id(id_)
             labour += house.labour # Could be changed to a stochastic variable where household decide whether or not to provide labour
-        print(f"{self.identifier} employed {labour} units of labour from {len(households)} households at time {time}")
+        print(f"\n{self.identifier} employed {labour} units of labour from {len(households)} households at time {time}")
         # Set capital equalt to deposits from previous period
         capital = self.get_account("deposits")
         # Determine initial amount of CBDC
@@ -272,7 +272,7 @@ class Firm(BaseAgent):
         # Produce Output
         self.supply = round(wage*alpha * (labour ** beta) * (capital ** gamma), 0)
         environment.total_output += self.supply
-        print(f"{self.identifier} produced {self.supply} units of output using {capital} units of capital and {labour} units of labour at time {time}.")
+        print(f"\n{self.identifier} produced {self.supply} units of output using {capital} units of capital and {labour} units of labour at time {time}.")
 
         # Create wage agreement and pay for wages
         for id_ in households:
@@ -293,8 +293,8 @@ class Firm(BaseAgent):
             out = -house.supply
             out_tranx = {"type_": "output_agreement", "from_" : self.identifier, "bank_from": bank_acc, "to" : house.identifier, "bank_to" : house_bank_acc, "amount" : out, "time" : time}
             environment.new_transaction(type_="output_agreement", asset='', from_= out_tranx["from_"], to = out_tranx["to"], amount = out_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-            print(f"{out} units output agreement with {house.identifier}")
-            print(self.balance_sheet())
+            print(f"\n{out} units output agreement with {house.identifier}")
+            #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -326,8 +326,8 @@ class Firm(BaseAgent):
             # Pay with CBDC
             cbdc_tranx = {"type_": "cbdc", "from_" : self.identifier, "to" : house.identifier, "amount" : wages*house.asset_prop["cbdc"], "time" : time}
             environment.get_agent_by_id("central_bank").make_cbdc_payment(environment, cbdc_tranx, time)
-            print(f"\n \n {wages} unit wage paid with {house.identifier} for labour \n \n ")
-            print(self.balance_sheet())
+            print(f"\n {wages} unit wage paid with {house.identifier} for labour")
+            #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
 
@@ -350,7 +350,7 @@ class Firm(BaseAgent):
         # Pay for sale with deposits
         deposit_tranx = {"type_": "deposits", "from_" : household_to.identifier, "bank_from": house_bank_acc, "to" : self.identifier, "bank_to" : bank_acc, "amount" : amount*household_to.asset_prop["deposits"], "time" : time}
         environment.get_agent_by_id(bank_acc).make_payment(environment, deposit_tranx, time)
-        print(f"{ration[2]} of output transferred from {ration[0]} to {ration[1]} at time {time}")
+        print(f"\n{ration[2]} of output transferred from {ration[0]} to {ration[1]} at time {time}")
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

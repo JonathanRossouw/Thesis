@@ -1,4 +1,5 @@
 from src.market import Market
+from src.central_bank import CentralBank
 
 """
 black_rhino is a multi-agent simulator for financial network analysis
@@ -24,7 +25,6 @@ import logging
 import datetime
 import numpy as np
 from src.transaction import Transaction
-from src.network import Network
 from src.market import Market
 # -------------------------------------------------------------------------
 #  class Updater
@@ -98,6 +98,7 @@ class Updater(BaseModel):
         self.net_settle(environment, time)
         self.firms_repay_loans(environment, time)
         self.net_settle(environment, time)
+        self.write_cbdc_transactions(environment, time)
         # The households sell labour to firms
         #self.sell_labour(environment, time)
         # The firms sell goods to households
@@ -212,7 +213,7 @@ class Updater(BaseModel):
             for house in G.nodes:
                 # For each node randomly select whether experiences a shock using 
                 # a random bernoulli variable with p = 0.6
-                shock = np.random.binomial(1, 0.2, 1)
+                shock = np.random.binomial(1, 0.6, 1)
                 # Shock is selected in bernoulli variable equals 1
                 if shock[0] == 1:
                     # Initialize network class instance
@@ -334,3 +335,34 @@ class Updater(BaseModel):
         for bank_trans in environment.banks[:]:
             bank_trans.interbank_settle(environment, time)
     # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # write_cbdc_transactions(environment, time)
+    # This function settles the transactions following the shock. If from and 
+    # to are at the same bank then transaction is settled. If different banks
+    # then only every fourth period is settled.
+    # -------------------------------------------------------------------------
+    def write_cbdc_transactions(self,  environment, time):
+        # Set Date Time from time
+        year,julian = [2021,time]
+        date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
+        # Year Month Day
+        year = int(date_time.strftime("%y"))
+        month = date_time.strftime("%m")
+        day = date_time.strftime("%d")
+        # Find last day of month
+        end_day = (datetime.date(year + int(int(month)/12), int(month)%12+1, 1) -datetime.timedelta(days=1)).strftime("%d")
+
+        if time > 0:
+        # Repay loans and contracts expire on the last day of the month
+            if end_day == day:
+                # Record CBDC Transactions
+                import json
+                file_cbdc = str('cbdc_transactions/cbdc_dict_' + month + '.json')
+                with open(file_cbdc, 'w') as cbdc:
+                    json.dump(environment.cbdc_transactions, cbdc)
+                environment.cbdc_transactions = []
+    # -------------------------------------------------------------------------
+
+
+
