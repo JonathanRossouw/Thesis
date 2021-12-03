@@ -256,8 +256,8 @@ class Firm(BaseAgent):
         capital = self.get_account("deposits")
         # Determine initial amount of CBDC
         self.cbdc_init = self.get_account("cbdc")
-        # Set production function parameters
 
+        # Set production function parameters
         wage = float(environment.gdp_calibrate[0]["Growth_Rate"][month])
         self.loan = wage * labour
         alpha = 1/capital
