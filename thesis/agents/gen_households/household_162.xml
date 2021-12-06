@@ -1,6 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<household identifier= 'household_162'>
-    <parameter name='equity' value='2885.142'></parameter>
-    <parameter name='labour' value='2885.142'></parameter>
-    <parameter name='propensity_to_save' value='0.4'></parameter>
-</household>

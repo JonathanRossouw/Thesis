@@ -72,7 +72,7 @@ class Generate_Agents:
 			# the following code ensures leading zeros so filenames will be in the right order
 			# for python to read in. Also, bank names are sorted properly in activeBanks of madfimas
 			# this code is ugly, but works...
-			labour = round((4000 * np.random.normal(1, 0.2, 1))[0], 3)
+			labour = round((4000 * np.random.lognormal(0, 0.4, 1))[0], 3)
 			householdfileName += ".xml"
 			outFile = open(householdfileName,  'w')
 			text = "<?xml version='1.0' encoding='UTF-8'?>\n"

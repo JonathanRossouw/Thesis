@@ -520,10 +520,15 @@ class Firm(BaseAgent):
     # checks whether the assets and liabilities have the same total value
     # -------------------------------------------------------------------------
     def check_consistency(self):
+        import numpy as np 
         balance_sheet = self.balance_sheet()
-        assets = round(sum(balance_sheet[self.identifier]["assets"].values()), -1)
-        liabilities = round(sum(balance_sheet[self.identifier]["liabilities"].values()), -1)
-        return (assets == liabilities)
+        assets_round = round(sum(balance_sheet[self.identifier]["assets"].values()), 0)
+        liabilities_floor = round(sum(balance_sheet[self.identifier]["liabilities"].values()), 0)
+        balance_sheet = self.balance_sheet()
+        assets = np.floor(sum(balance_sheet[self.identifier]["assets"].values()))
+        liabilities = np.floor(sum(balance_sheet[self.identifier]["liabilities"].values()))
+
+        return (assets == liabilities or assets_round == liabilities_floor)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
