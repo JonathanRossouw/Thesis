@@ -105,7 +105,7 @@ class Generate_Agents:
 			outFile = open(firmfileName,  'w')
 			text = "<?xml version='1.0' encoding='UTF-8'?>\n"
 			text = text + "<firm identifier= '" + identifier + "'>\n"
-			text = text + "    <parameter name='endowment' value='30000'></parameter>\n"
+			text = text + "    <parameter name='endowment' value='0.0'></parameter>\n"
 			text = text + "    <parameter name='propensity_to_save' value='0.4'></parameter>\n"
 			text = text + "</firm>\n"
 			outFile.write(text)

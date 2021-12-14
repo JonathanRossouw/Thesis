@@ -83,29 +83,22 @@ class Updater(BaseModel):
     # do_update
     # -------------------------------------------------------------------------
     def do_update(self,  environment,  time):
-        # As a first step, we accrue all interest over the transactions
-        # Thus, important to notice to keep 0 as interest by default
-        # Unless transaction should carry interest
-        # DON'T DO INTERESTS SO FAR, DO ONCE THE REST WORKS
-        #self.accrue_interests(environment, time)
-        # Then agents get their labour endowment for the step (e.g. work hours to spend)
-        # For now we don't need to keep track of labour left as there is no queue
+        # If time is 0, endow agents with endowments
         self.endow_agents(environment, time)
+        # Ensure ACH payments are initialized
+        self.ach_initialize_batches(environment, time)
+        # For time > 0, initiate production
         self.initiate_production(environment, time)
+        # Firms pay wages and households purchase and consume output
         self.do_ration_output(environment, time)
-        self.net_settle(environment, time)
+        # Households demand and purchase services
         self.payment_shock(environment, time)
-        self.net_settle(environment, time)
+        # Firms repay loans at end of month
         self.firms_repay_loans(environment, time)
+        # Batching at ACH settles
         self.net_settle(environment, time)
+        # CBDC transactions settle
         self.write_cbdc_transactions(environment, time)
-        # The households sell labour to firms
-        #self.sell_labour(environment, time)
-        # The firms sell goods to households
-        #self.consume_rationed(environment, time)
-        # We net deposits and loans
-        #self.net_loans_deposits(environment, time)
-        # We remove goods and labour (perishable) and are left with capital
         # Purging accounts at every step just in case
         transaction = Transaction()
         transaction.purge_accounts(environment)
@@ -189,6 +182,29 @@ class Updater(BaseModel):
             logging.info("  deposit endowed on step: %s",  time)
         # Keep on the log with the number of step, for debugging mostly
     # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # ach_initialize_batches
+    # This function makes sure that all households have the appropriate
+    # deposit endowment for every step, in line with the parameters
+    # -------------------------------------------------------------------------
+    def ach_initialize_batches(self,  environment, time):
+        # Call endowment method in Households and Banks class
+        if time == 0:
+            # Loop through banks to create batches
+            for bank in environment.banks:
+                environment.get_agent_by_id("ach").batches[bank.identifier] = []
+                environment.get_agent_by_id("ach").collateral[bank.identifier] = 0
+
+        if (time+1)%6 == 0:
+            # Loop through banks to create ach deposits and provide collateral
+            # Ensure reserves are sufficient
+            for bank in environment.banks:
+                bank.ach_deposits_collateral(environment, time)
+
+    # -------------------------------------------------------------------------
+
+
 
     # -------------------------------------------------------------------------
     # payment_shock(environment, time)
@@ -329,11 +345,15 @@ class Updater(BaseModel):
     # to are at the same bank then transaction is settled. If different banks
     # then only every fourth period is settled.
     # -------------------------------------------------------------------------
-    def net_settle(self,  environment, time):
-        # Settle payments by with banks
-        # Iteratre through stored transactions
-        for bank_trans in environment.banks[:]:
-            bank_trans.interbank_settle(environment, time)
+    def net_settle(self, environment, time):
+        if time%6 == 0:
+            environment.get_agent_by_id("ach").batch_settle(environment, time)
+            # Settle payments by with banks
+            # Iteratre through stored transactions
+            for bank in environment.banks[:]:
+                for tranx in bank.store[:]:
+                    bank.settle_payment(environment, tranx, time)
+                    bank.store.remove(tranx)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

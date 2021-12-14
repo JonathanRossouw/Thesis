@@ -207,7 +207,7 @@ class Household(BaseAgent):
     def hh_asset_allocation(self, environment, time):
         import random
         # Decide on asset allocation
-        self.asset_prop = {"deposits":0.5, "cbdc":0.5, "bank_notes":0.0}
+        self.asset_prop = {"deposits":1, "cbdc":0, "bank_notes":0.0}
         # Decide on Deposits
         deposits = self.get_account("deposits") * self.asset_prop["deposits"] #random.uniform(0.4, 0.8)   #### Use this to set asset allowcation to only deposits
         # Decide on CBDC

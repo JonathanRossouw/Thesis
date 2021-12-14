@@ -25,25 +25,27 @@ from abm_template.src.baseagent import BaseAgent
 
 # ============================================================================
 #
-# class CentralBank
+# class ACH
 #
 # ============================================================================
 
 
-class CentralBank(BaseAgent):
+class ACH(BaseAgent):
     #
     #
     # VARIABLES
     #
     #
 
-    identifier = ""  # identifier of the central bank
-    parameters = {}  # parameters of the central bank
-    state_variables = {}  # state variables of the central bank
-    accounts = []  # all accounts of the central bank (filled with transactions)
+    identifier = ""  # identifier of the ACH
+    parameters = {}  # parameters of the ACH
+    state_variables = {}  # state variables of the ACH
+    accounts = []  # all accounts of the ACH (filled with transactions)
     assets = []
     liabilities = []
-    pk = 0
+
+    batches = {}  # Store transactions for batching
+    collateral = {} # Record bank collateral
 
     #
     #
@@ -61,29 +63,29 @@ class CentralBank(BaseAgent):
         return self.identifier
 
     def set_identifier(self, value):
-        super(CentralBank, self).set_identifier(value)
+        super(ACH, self).set_identifier(value)
 
     def get_parameters(self):
         return self.parameters
 
     def set_parameters(self, value):
-        super(CentralBank, self).set_parameters(value)
+        super(ACH, self).set_parameters(value)
 
     def get_state_variables(self):
         return self.state_variables
 
     def set_state_variables(self, value):
-        super(CentralBank, self).set_state_variables(value)
+        super(ACH, self).set_state_variables(value)
 
     def append_parameters(self, value):
-        super(CentralBank, self).append_parameters(value)
+        super(ACH, self).append_parameters(value)
 
     def append_state_variables(self, value):
-        super(CentralBank, self).append_state_variables(value)
+        super(ACH, self).append_state_variables(value)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
-    # functions needed to make CentralBank() hashable
+    # functions needed to make ACH() hashable
     # -------------------------------------------------------------------------
     def __key__(self):
         return self.identifier
@@ -99,9 +101,9 @@ class CentralBank(BaseAgent):
     # __init__
     # -------------------------------------------------------------------------
     def __init__(self):
-        self.identifier = ""  # identifier of the central bank
-        self.parameters = {}  # parameters of the central bank
-        self.state_variables = {}  # state variables of the central bank
+        self.identifier = ""  # identifier of the ACH
+        self.parameters = {}  # parameters of the ACH
+        self.state_variables = {}  # state variables of the ACH
         self.accounts = []  # all accounts of the bank (filled with transactions)
         # DO NOT EVER ASSIGN PARAMETERS BY HAND AS DONE BELOW IN PRODUCTION CODE
         # ALWAYS READ THE PARAMETERS FROM CONFIG FILES
@@ -109,109 +111,13 @@ class CentralBank(BaseAgent):
         # CONVERSELY, IF YOU WANT TO READ THE VALUE, DON'T USE THE FULL NAMES
         # INSTEAD USE __getattr__ POWER TO CHANGE THE COMMAND FROM
         # instance.static_parameters["xyz"] TO instance.xyz - THE LATTER IS PREFERRED
-        self.parameters["interest_rate_cb_loans"] = 0.0  # interest rate on loans
-        self.assets = ["open_market_operations"]
-        self.liabilities = ["reserves", "cbdc", "bank_notes"]
-    # -------------------------------------------------------------------------
+        self.assets = ["loans"]
+        self.liabilities = ["ach_deposits"]
+        self.batches = {}
+        self.collateral = {}
 
-
+        
     # -------------------------------------------------------------------------
-    # new_reserves
-    # transfer new reserves to bank and open market operations
-    # -------------------------------------------------------------------------
-    def new_reserves(self, environment, tranx):
-        # Create reserves for bank
-        environment.new_transaction(type_="reserves", asset='', from_= tranx["from_"], to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        # Create Open Market Operations agreement with Bank
-        environment.new_transaction(type_="open_market_operations", asset='', from_= tranx["to"], to = tranx["from_"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-    # -------------------------------------------------------------------------
-
-    # -------------------------------------------------------------------------
-    # make_cbdc_payment
-    # takes in transaction details from household and makes payment
-    # -------------------------------------------------------------------------
-    def make_cbdc_payment(self, environment, tranx, time):
-		# Transfer funds from household to central bank to household
-        environment.new_transaction(type_="cbdc", asset='', from_=tranx["from_"], to="central_bank", amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        # Transfer funds from central bank to household
-        environment.new_transaction(type_="cbdc", asset='', from_="central_bank", to=tranx["to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-		# We print the action of selling to the screen
-        print(f"\n{tranx['from_']}s paid {tranx['amount']}f of cbdc to {'central_bank'}s for {tranx['to']}s at time {tranx['time']}d.")
-        print(f"\n{'central_bank'}s settled {tranx['amount']}f of cbdc to {tranx['to']}s at time {tranx['time']}d.")
-        #print(self.balance_sheet())
-        #logging.info("  payments made on step: %s",  time)
-    # -------------------------------------------------------------------------
-
-    # -------------------------------------------------------------------------
-    # make_bank_notes_payment
-    # takes in transaction details from household and makes payment
-    # -------------------------------------------------------------------------
-    def make_bank_notes_payment(self, environment, tranx, time):
-		# Transfer funds from household to central bank to household
-        environment.new_transaction(type_="bank_notes", asset='', from_=tranx["from_"], to="central_bank", amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        # Transfer funds from central bank to household
-        environment.new_transaction(type_="bank_notes", asset='', from_="central_bank", to=tranx["to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-		# We print the action of selling to the screen
-        print(f"\n{tranx['from_']}s paid {tranx['amount']}f of cbdc to {self.identifier}s for {tranx['to']}s at time {tranx['time']}d.")
-        print(f"\n{self.identifier}s settled {tranx['amount']}f of cbdc to {tranx['to']}s at time {tranx['time']}d.")
-        #print(self.balance_sheet())
-        #logging.info("  payments made on step: %s",  time)
-    # -------------------------------------------------------------------------
-
-    # -------------------------------------------------------------------------
-    # rgts_payment
-    # takes in transaction details between banks
-    # -------------------------------------------------------------------------
-    def rgts_payment(self, environment, tranx, time):
-		# Transfer funds from central bank to bank
-        environment.new_transaction(type_="reserves", asset='', from_=tranx["bank_from"], to=tranx["bank_to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-
-        try:
-            environment.get_agent_by_id(tranx["bank_to"]).settle_payment(environment, tranx, time)
-        except KeyError:
-            print("")
-
-        print(f"\n RTGS payment of {tranx['amount']} of reserves from {tranx['bank_from']} to {tranx['bank_to']} at time {time}d.")
-        #print(self.balance_sheet())
-        #logging.info("  payments made on step: %s",  time)
-    # -------------------------------------------------------------------------
-
-    # -------------------------------------------------------------------------
-    # cbdc_settle
-    # Household exchanges deposits at bank for cbdc at central bank
-    # -------------------------------------------------------------------------
-    def cbdc_settle(self, environment, tranx, time):
-        if tranx["to"] is "central_bank":
-            # Transfer CBDC to Agent
-            environment.new_transaction(type_="cbdc", asset='', from_=tranx["bank_to"], to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-            # Transfer Open Market Operations to Bank
-            environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to=tranx["bank_to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-            print(f"\nCBDC settlement of {tranx['amount']} to {tranx['from_']} complete")
-            #print(self.balance_sheet())
-        elif tranx["to"] != "central_bank":
-            # Transfer CBDC from Agent to Central Bank
-            environment.new_transaction(type_="cbdc", asset='', from_=tranx["to"], to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-            # Transfer Open Market Operations from Bank to Central Bank
-            environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to=tranx["bank_to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-            print(f"\nCBDC settlement of {tranx['amount']} to {tranx['from_']} complete")
-            #print(self.balance_sheet())
-    # -------------------------------------------------------------------------
-
-
-    # -------------------------------------------------------------------------
-    # bank_notes_settle
-    # Household exchanges deposits at bank for Bank Notes at Central Bank
-    # -------------------------------------------------------------------------
-    def bank_notes_settle(self, environment, tranx, time):
-        # Transfer Bank Notes to Household
-        environment.new_transaction(type_="bank_notes", asset='', from_="central_bank", to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        # Transfer Open Market Operations to Bank
-        environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to="central_bank", amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        # Increase Bank Reserves equal to increase Open Market Operations agreement
-        print(f"\n Bank Notes settlement of {tranx['amount']} to {tranx['from_']} complete")
-        #print(self.balance_sheet())
-    # -------------------------------------------------------------------------
-
 
     # -------------------------------------------------------------------------
     # __del__
@@ -222,12 +128,12 @@ class CentralBank(BaseAgent):
 
     # -------------------------------------------------------------------------
     # __str__
-    # returns a string describing the central bank and its properties
+    # returns a string describing the ACH and its properties
     # based on the implementation in the abstract class BaseAgent
     # but adds the type of agent (bank) and lists all transactions
     # -------------------------------------------------------------------------
     def __str__(self):
-        bank_string = super(CentralBank, self).__str__()
+        bank_string = super(ACH, self).__str__()
         bank_string = bank_string.replace("\n", "\n    <type value='central_bank'>\n", 1)
         text = "\n"
         text = text + "  </agent>"
@@ -244,8 +150,51 @@ class CentralBank(BaseAgent):
     # </central_bank>
     # -------------------------------------------------------------------------
     def get_parameters_from_file(self,  bank_filename, environment):
-        super(CentralBank, self).get_parameters_from_file(bank_filename, environment)
+        super(ACH, self).get_parameters_from_file(bank_filename, environment)
     # ------------------------------------------------------------------------
+
+
+    # -------------------------------------------------------------------------
+    # batch_settle
+    # determine which banks have positive and negative batch accounts
+    # -------------------------------------------------------------------------
+    def batch_settle(self, environment, time):
+        # Import market
+        from src.market import Market
+        # Aggregate payments and determine balances
+        for banks in self.batches:
+            self.batches[banks] = sum(self.batches[banks])
+        # Create list of balances for rationing
+        batches_ration = []
+        for key, value in self.batches.items():
+            batches_ration.append([key, value])
+        # Perform rationing
+        mark = Market(environment)
+        ach_settle = mark.rationing(batches_ration)
+        # Loop through rationing tranactions and call interbank settlement mtheod to net reserve payments
+        for tranx in ach_settle:
+            # Transfer Reserves between banks
+            rgts_tranx = {"bank_from":tranx[0], "bank_to":tranx[1], "amount":tranx[2]}
+            environment.get_agent_by_id("central_bank").rgts_payment(environment, rgts_tranx, time)
+            print(f"\n {tranx[0]} settled {tranx[1]} worth of reserves to {tranx[2]} \n")
+        for bank in environment.banks:
+        # Transfer ACH deposits
+            ach_deposits = bank.get_account("ach_deposits")
+            bank_id = bank.identifier
+            environment.new_transaction(type_="ach_deposits", asset='', from_="ach", to=bank_id, amount=ach_deposits, interest=0.00, maturity=0, time_of_default=-1)
+            print(f"\n ACH settled {ach_deposits} worth of ACH deposits to {bank_id} \n")
+        # Return bank collateral
+        for bank in self.collateral:
+            collateral_amount = self.collateral[bank]
+            environment.new_transaction(type_="loans", asset='', from_=self.identifier, to=bank, amount=collateral_amount, interest=0.00, maturity=0, time_of_default=-1)
+            self.collateral[bank] = 0
+        # Reset batches
+        for bank in self.batches:
+            # Transfer collateral 
+            self.batches[bank] = []
+    # -------------------------------------------------------------------------
+
+
 
     # -------------------------------------------------------------------------
     # balance_sheet
@@ -295,7 +244,7 @@ class CentralBank(BaseAgent):
             if transaction.type_ in self.assets:
                 if (transaction.type_ == type_) & (transaction.from_.identifier == self.identifier):
                     volume = volume - float(transaction.amount)
-                elif (transaction.type_ == type_) & (transaction.from_ .identifier!= self.identifier):
+                elif (transaction.type_ == type_) & (transaction.from_.identifier!= self.identifier):
                     volume = volume + float(transaction.amount)
             elif transaction.type_ in self.liabilities:
                 if (transaction.type_ == type_) & (transaction.from_.identifier == self.identifier):
@@ -311,7 +260,7 @@ class CentralBank(BaseAgent):
     # returns the number of transactions of a given type
     # -------------------------------------------------------------------------
     def get_account_num_transactions(self,  type_):
-        return super(CentralBank, self).get_account_num_transactions(type_)
+        return super(ACH, self).get_account_num_transactions(type_)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -335,27 +284,27 @@ class CentralBank(BaseAgent):
 
     # -------------------------------------------------------------------------
     # clear_accounts
-    # removes all transactions from central bank's accounts
+    # removes all transactions from ACH's accounts
     # only for testing, the one in transaction should be used in production
     # -------------------------------------------------------------------------
     def clear_accounts(self, environment):
-        super(CentralBank, self).clear_accounts(environment)
+        super(ACH, self).clear_accounts(environment)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
     # purge_accounts
-    # removes worthless transactions from central bank's accounts
+    # removes worthless transactions from ACH's accounts
     # -------------------------------------------------------------------------
     def purge_accounts(self, environment):
-        super(CentralBank, self).purge_accounts(environment)
+        super(ACH, self).purge_accounts(environment)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
     # get_transactions_from_file
-    # reads transactions from the config file to the central bank's accounts
+    # reads transactions from the config file to the ACH's accounts
     # -------------------------------------------------------------------------
     def get_transactions_from_file(self, filename, environment):
-        super(CentralBank, self).get_transactions_from_file(filename, environment)
+        super(ACH, self).get_transactions_from_file(filename, environment)
     # -------------------------------------------------------------------------
 
     # __getattr__
@@ -368,5 +317,5 @@ class CentralBank(BaseAgent):
     # would be bad practice [provides additional checks]
     # -------------------------------------------------------------------------
     def __getattr__(self, attr):
-        return super(CentralBank, self).__getattr__(attr)
+        return super(ACH, self).__getattr__(attr)
     # -------------------------------------------------------------------------

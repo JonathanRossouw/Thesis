@@ -1,0 +1,3 @@
+<ach identifier='ach'>
+    <transaction type='cbdc' asset='' from='ach' to='ach' amount='0' interest='0.00' maturity='0' time_of_default='-1'></transaction>
+</ach>

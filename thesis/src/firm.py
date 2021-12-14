@@ -188,8 +188,10 @@ class Firm(BaseAgent):
     def firm_asset_endowment(self, environment, time):
         # Create Loan Account at Bank
         bank_acc = list(environment.bank_network.adj[self.identifier])[0]
-        loan_tranx = {"type_": "loans", "from_" : self.identifier, "bank_from": bank_acc, "to" : self.identifier, "bank_to" : bank_acc, "amount" : self.endowment, "time" : time}
+        loan_amount = 2*self.get_account("capital_firm")
+        loan_tranx = {"type_": "loans", "from_" : self.identifier, "bank_from": bank_acc, "to" : self.identifier, "bank_to" : bank_acc, "amount" : loan_amount, "time" : time}
         environment.get_agent_by_id(bank_acc).new_loan(environment, loan_tranx)
+        #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -201,7 +203,7 @@ class Firm(BaseAgent):
         import random
         # Decide on asset allocation
         # Decide on Deposits
-        deposits = self.get_account("deposits") * 0.5# random.uniform(0.4, 0.8)   #### Use this to set asset allowcation to only deposits
+        deposits = self.get_account("deposits")# random.uniform(0.4, 0.8)   #### Use this to set asset allowcation to only deposits
         # Decide on CBDC
         cbdc = (self.get_account("deposits") - deposits) #* random.uniform(0.5, 1)  #### Use this to set asset allowcation to only CBDC
         # Remainder to bank_notes
