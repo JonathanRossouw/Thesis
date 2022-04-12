@@ -86,20 +86,21 @@ class Updater(BaseModel):
         # If time is 0, endow agents with endowments
         self.endow_agents(environment, time)
         # Ensure ACH payments are initialized
-        self.ach_initialize_batches(environment, time)
+        #self.ach_initialize_batches(environment, time)
         # For time > 0, initiate production
         self.initiate_production(environment, time)
         # Firms pay wages and households purchase and consume output
-        self.do_ration_output(environment, time)
+        self.output_consumption(environment, time)
         # Households demand and purchase services
-        self.payment_shock(environment, time)
+        #self.payment_shock(environment, time)
         # Firms repay loans at end of month
-        self.firms_repay_loans(environment, time)
+        #self.repay_loans(environment, time)
         # Batching at ACH settles
         self.net_settle(environment, time)
         # CBDC transactions settle
-        self.write_cbdc_transactions(environment, time)
+        #self.write_cbdc_transactions(environment, time)
         # Purging accounts at every step just in case
+        self.update_equity(environment, time)
         transaction = Transaction()
         transaction.purge_accounts(environment)
     # -------------------------------------------------------------------------
@@ -111,25 +112,11 @@ class Updater(BaseModel):
     def endow_agents(self, environment, time):
         # For eacn of households, firms and banks
         if time == 0:
-            self.hh_endow_assets(environment, time)
-            self.firm_endow_assets(environment, time)
-            self.bank_endow_assets(environment, time)
+            self.bank_initialize(environment, time)
             self.hh_allocate_assets(environment, time)
-            self.firm_allocate_assets(environment, time)
-    # -------------------------------------------------------------------------
-
-    # -------------------------------------------------------------------------
-    # hh_endow_assets
-    # This function makes sure that all households have the appropriate
-    # deposit endowment for every step, in line with the parameters
-    # -------------------------------------------------------------------------
-    def hh_endow_assets(self,  environment, time):
-        # Call endowment method in Households class
-        if time == 0:
-            for household in environment.households:
-                household.hh_asset_endowment(environment, time)
-            logging.info("  deposit endowed on step: %s",  time)
-        # Keep on the log with the number of step, for debugging mostly
+            self.firm_endow_assets(environment, time)
+            self.bank_initialize_reserves(environment, time)
+            self.ach_initialize(environment, time)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -140,47 +127,74 @@ class Updater(BaseModel):
         # Call allocation method in Households class
         if time == 0:
             for household in environment.households:
-                household.hh_asset_allocation(environment, time)
+                household.hh_asset_endowment(environment, time)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
     # firm_endow_assets
-    # This function makes sure that all firms have the appropriate
-    # deposit endowment for every step, in line with the parameters
+    # This function makes sure that all firms deposit bank notes received from 
+    # households for firm capital at bank to create deposit accounts
     # -------------------------------------------------------------------------
     def firm_endow_assets(self,  environment, time):
         # Call endowment method in Firms class
         if time == 0:
             for firm in environment.firms:
-                firm.firm_asset_endowment(environment, time)
+                firm.firm_deposit_bank_notes(environment, time)
             logging.info("  deposit endowed on step: %s",  time)
         # Keep on the log with the number of step, for debugging mostly
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
-    # firm_allocate_assets
-    # This function makes sure that all firms have the appropriate
-    # deposit endowment for every step, in line with the parameters
+    # bank_initialize
+    # banks create accounts for households and firms that are in their banking 
+    # neighbourhood
     # -------------------------------------------------------------------------
-    def firm_allocate_assets(self,  environment, time):
-        # Call allocation method in Firms class
-        if time == 0:
-            for firm in environment.firms:
-                firm.firm_asset_allocation(environment, time)
-    # -------------------------------------------------------------------------
-
-    # -------------------------------------------------------------------------
-    # bank_endow_deposits
-    # This function makes sure that all households have the appropriate
-    # deposit endowment for every step, in line with the parameters
-    # -------------------------------------------------------------------------
-    def bank_endow_assets(self,  environment, time):
+    def bank_initialize(self,  environment, time):
         # Call endowment method in Households and Banks class
         if time == 0:
             for bank in environment.banks:
-                bank.bank_asset_allocation(environment)
-            logging.info("  deposit endowed on step: %s",  time)
+                bank.bank_initialize(environment)
+            #logging.info("  deposit endowed on step: %s",  time)
         # Keep on the log with the number of step, for debugging mostly
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # bank_initialize_reserves
+    # This function makes sure that all firms have the appropriate
+    # deposit endowment for every step, in line with the parameters
+    # -------------------------------------------------------------------------
+    def bank_initialize_reserves(self,  environment, time):
+        # Call allocation method in Firms class
+        if time == 0:
+            for bank in environment.banks:
+                bank.initialize_reserves(environment, time)
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # bank_initialize_reserves
+    # This function makes sure that all firms have the appropriate
+    # deposit endowment for every step, in line with the parameters
+    # -------------------------------------------------------------------------
+    def update_equity(self,  environment, time):
+        # Call allocation method in Firms class
+        E = environment.employment_network
+        for firm in environment.firms:
+            for hh in E.adj[firm.identifier]:
+                equity_prop = firm.equity_households[hh]
+                environment.get_agent_by_id(hh).equity_firm = round(firm.get_equity() * equity_prop, 3)
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # ach_initialize
+    # This function makes sure that all households have the appropriate
+    # deposit endowment for every step, in line with the parameters
+    # -------------------------------------------------------------------------
+    def ach_initialize(self,  environment, time):
+        # Call endowment method in Households and Banks class
+        if time == 0:
+            # Loop through banks to create batches
+            for bank in environment.banks:
+                environment.get_agent_by_id("ach").banks.append(bank.identifier)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -195,46 +209,13 @@ class Updater(BaseModel):
             for bank in environment.banks:
                 environment.get_agent_by_id("ach").batches[bank.identifier] = []
                 environment.get_agent_by_id("ach").collateral[bank.identifier] = 0
-
-        if (time+1)%6 == 0:
-            # Loop through banks to create ach deposits and provide collateral
-            # Ensure reserves are sufficient
-            for bank in environment.banks:
-                bank.ach_deposits_collateral(environment, time)
-
-    # -------------------------------------------------------------------------
-
-
-
-    # -------------------------------------------------------------------------
-    # payment_shock(environment, time)
-    # This function provides the payment shock. A portion of households are 
-    # randomly hit by shock. The shock dictates that households pay a portion
-    #  of deposits to a random household that shares an edge.
-    # -------------------------------------------------------------------------
-    def payment_shock(self, environment, time):
-        # Set Date Time from time
-        year,julian = [2021,time]
-        date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
-        # Year Month Day
-        year = int(date_time.strftime("%y"))
-        month = int(date_time.strftime("%m"))
-        day = date_time.strftime("%d")
-        # Find last day of month
-        end_day = (datetime.date(year + int(month/12), month%12+1, 1) -datetime.timedelta(days=1)).strftime("%d")
-        if time > 0 and day != end_day and day != 1:
-            # Set G as the network
-            G = environment.social_network
-            # Loop through nodes in the network
-            for house in G.nodes:
-                # For each node randomly select whether experiences a shock using 
-                # a random bernoulli variable with p = 0.6
-                shock = np.random.binomial(1, 0.6, 1)
-                # Shock is selected in bernoulli variable equals 1
-                if shock[0] == 1:
-                    # Initialize network class instance
-                    environment.get_agent_by_id(house).initiate_payment(environment, time)
-    # -------------------------------------------------------------------------    
+        elif time > 0:
+            if time%environment.batch == 1:
+                # Loop through banks to create ach deposits and provide collateral
+                # Ensure reserves are sufficient
+                for bank in environment.banks:
+                    bank.ach_deposits_collateral(environment, time)
+    # -------------------------------------------------------------------------  
 
     # -------------------------------------------------------------------------
     # production(environment, time)
@@ -245,31 +226,30 @@ class Updater(BaseModel):
     # -------------------------------------------------------------------------
     def initiate_production(self, environment, time):
         # Set Date Time from time
-        year,julian = [2021,time]
-        date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
-        # Year Month Day
-        year = int(date_time.strftime("%y"))
-        month = int(date_time.strftime("%m"))
-        day = date_time.strftime("%d")
-        # Find last day of month
-        end_day = (datetime.date(year + int(month/12), month%12+1, 1) -datetime.timedelta(days=1)).strftime("%d")
-        # Production on the first of the month
+        # year,julian = [2021,time]
+        # date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
+        # # Year Month Day
+        # year = int(date_time.strftime("%y"))
+        # month = int(date_time.strftime("%m"))
+        # day = date_time.strftime("%d")
+        # # Find last day of month
+        # end_day = (datetime.date(year + int(month/12), month%12+1, 1) -datetime.timedelta(days=1)).strftime("%d")
+        # # Production on the first of the month
         if time > 0:
-            if day == "01":
-                G = environment.employment_network
-                # Loop through firms in the network and initiate production
-                for u in G.nodes(data=False):
-                    agent = environment.get_agent_by_id(u)
-                    if agent in environment.firms:
-                        agent.production(environment, time)
-                        print(f"\n PRODUCTION {agent.identifier}!!! \n")
+            E = environment.employment_network
+            # Loop through firms in the network and initiate production
+            for u in E.nodes(data=False):
+                agent = environment.get_agent_by_id(u)
+                if agent in environment.firms:
+                    agent.production_function(environment, time)
+                    print(f"\n PRODUCTION {agent.identifier}!!! \n")
 
             # Wages on the 25th of the month
-            if (int(day) % 25) == 0:
-                environment.sweep_cbdc_payments = 0
-                G = environment.employment_network
+            # if (int(day) % 25) == 0:
+            if time%25 == 0:
+                E = environment.employment_network
                 # Loop through firms in the network and pay wages
-                for u in G.nodes(data=False):
+                for u in E.nodes(data=False):
                     agent = environment.get_agent_by_id(u)
                     if agent in environment.firms:
                         agent.production_wage(environment, time)
@@ -277,65 +257,89 @@ class Updater(BaseModel):
                         
     # ------------------------------------------------------------------------- 
 
-    # -------------------------------------------------------------------------
-    # firms_repay_loans(self, environment, time)
-    # Loop through firms and repay loans to banks
-    # -------------------------------------------------------------------------
-    def firms_repay_loans(self, environment, time):
-        # Set Date Time from time
-        year,julian = [2021,time]
-        date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
-        # Year Month Day
-        year = int(date_time.strftime("%y"))
-        month = int(date_time.strftime("%m"))
-        day = date_time.strftime("%d")
-        # Find last day of month
-        end_day = (datetime.date(year + int(month/12), month%12+1, 1) -datetime.timedelta(days=1)).strftime("%d")
-        # Production on the first of the month
-        if time > 0:
-        # Repay loans and contracts expire on the last day of the month
-            if end_day == day:
-                environment.sweep_cbdc_payments = 0
-                G = environment.employment_network
-                # Loop through firms in the network and repay loans
-                for u in G.nodes(data=False):
-                    agent = environment.get_agent_by_id(u)
-                    if agent in environment.firms:
-                        agent.production_repay_loan(environment, time)
-                        print(f"\n REPAY LOANS {agent.identifier}!!! \n")
-    # -------------------------------------------------------------------------
+    # # -------------------------------------------------------------------------
+    # # firms_repay_loans(self, environment, time)
+    # # Loop through firms and repay loans to banks
+    # # -------------------------------------------------------------------------
+    # def repay_loans(self, environment, time):
+    #     # Set Date Time from time
+    #     # year,julian = [2021,time]
+    #     # date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
+    #     # # Year Month Day
+    #     # year = int(date_time.strftime("%y"))
+    #     # month = int(date_time.strftime("%m"))
+    #     # day = date_time.strftime("%d")
+    #     # # Find last day of month
+    #     # end_day = (datetime.date(year + int(month/12), month%12+1, 1) -datetime.timedelta(days=1)).strftime("%d")
+    #     # # Production on the first of the month
+    #     if time > 0:
+    #     # # Repay loans and contracts expire on the last day of the month
+    #         # if end_day == day:
+    #         if time%30 == 0:
+    #             environment.sweep_cbdc_payments = 0
+    #             G = environment.employment_network
+    #             # Loop through firms in the network and repay loans
+    #             for u in G.nodes(data=False):
+    #                 agent = environment.get_agent_by_id(u)
+    #                 if agent in environment.firms:
+    #                     agent.production_repay_loan(environment, time)
+    #                     print(f"\n REPAY LOANS {agent.identifier}!!! \n")
+    #                 elif agent in environment.households:
+    #                     agent.labour_loan(environment, time)
+    #                     print(f"\n REPAY LOANS {agent.identifier}!!! \n")
+    # # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
-    # do_ration_output(self, environment, time)
+    # output_consumption(self, environment, time)
     # Loop through nodes in consumption network and ration output for each 
     # household and all firms
     # -------------------------------------------------------------------------
-    def do_ration_output(self, environment, time):
-        # Set Date Time from time
-        year,julian = [2021,time]
-        date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
-        # Year Month Day
-        year = int(date_time.strftime("%y"))
-        month = int(date_time.strftime("%m"))
-        day = date_time.strftime("%d")
-        # Find last day of month
-        end_day = (datetime.date(year + int(month/12), month%12+1, 1) -datetime.timedelta(days=1)).strftime("%d")
+    def output_consumption(self, environment, time):
+        # # Set Date Time from time
+        # year,julian = [2021,time]
+        # date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
+        # # Year Month Day
+        # year = int(date_time.strftime("%y"))
+        # month = int(date_time.strftime("%m"))
+        # day = date_time.strftime("%d")
+        # # Find last day of month
+        # end_day = (datetime.date(year + int(month/12), month%12+1, 1) -datetime.timedelta(days=1)).strftime("%d")
         # Production on the first of the month
-        mark = Market(environment)
-        G = environment.consumption_network
         if time > 0:
-            if day != end_day:
-                for node in list(G.nodes(data=True)):
-                    if node[1]["id"] == "household":
-                        shock = np.random.binomial(1, 0.6, 1)
-                        # Shock is selected in bernoulli variable equals 1
-                        if shock[0] == 1:
-                            mark.output_rationing(environment, node, time)
-                            print(f"\n RATION OUTPUT!!! \n")
-            elif day == end_day:
-                for node in list(G.nodes(data=True)):
-                    if node[1]["id"] == "household":
-                        mark.output_rationing(environment, node, time)
+            import random
+            G = environment.consumption_network #Get consumption network
+            for node in list(G.nodes(data=True)): # loop through nodes
+                if node[1]["id"] == "firm": # for all firms
+                    firm = environment.get_agent_by_id(node[0])
+                    import random
+                    supply_frac = []    # create empty list of fractional supply
+                    supply = range(int(firm.supply)) # create list of units of output
+                    it = iter(supply)   # create iterable list of units of output
+                    hh_num = len(G.adj[node[0]]) # determine number of households that are connected to firm in consumption network
+                    from itertools import islice
+                    size = len(supply)  # determine number of units of output
+                    for i in range(hh_num-1,0,-1): # loop through n-1 households 
+                        s = random.randint(0, hh_num - i) # create min and max amount of consumption
+                        supply_frac.append(list(islice(it,0,s)))    # determine which units of output ith household consumes and add to supply list
+                        size -= s   # reduce number of units available
+                    supply_frac.append(list(it))    # add remaining units to final household
+                    supply_frac = [len(u) for u in  supply_frac]    # count number of units demanded per household
+                    print(supply_frac)
+                    # Loop through households and number of units allocated and create deposit transaction
+                    for house, k in zip(list(G.adj[node[0]]), supply_frac):
+                        if k == 0:
+                            pass
+                        elif k > 0:  
+                            hh = environment.get_agent_by_id(house)
+                            hh_bank_acc = list(environment.bank_network.adj[hh.identifier])[0]
+                            firm_bank_acc = list(environment.bank_network.adj[firm.identifier])[0]
+                            consumption_demand = {"type_": "deposit", "from_" : hh.identifier, "to" : firm.identifier, "amount" : k, "bank_from":hh_bank_acc, "bank_to":firm_bank_acc, "time" : time}
+                            hh.deposits_payment(environment, consumption_demand, time)
+                            print(f"{hh.identifier} purchased {k} units of output from {firm.identifier}")
+                # Set remaining supply at firm to zero.        
+                    firm.supply -= sum(supply_frac)
+                    firm.sales += sum(supply_frac)
+        environment.deposits_period.append(environment.total_deposit_payments)
     # -------------------------------------------------------------------------
  
 
@@ -346,14 +350,11 @@ class Updater(BaseModel):
     # then only every fourth period is settled.
     # -------------------------------------------------------------------------
     def net_settle(self, environment, time):
-        if time%6 == 0:
+        if time > 0 and time%environment.batch == 0:
             environment.get_agent_by_id("ach").batch_settle(environment, time)
-            # Settle payments by with banks
-            # Iteratre through stored transactions
-            for bank in environment.banks[:]:
-                for tranx in bank.store[:]:
-                    bank.settle_payment(environment, tranx, time)
-                    bank.store.remove(tranx)
+            # Loop through banks
+            for bank in environment.banks:
+                bank.settle_ach_payments(environment, time)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -362,26 +363,26 @@ class Updater(BaseModel):
     # to are at the same bank then transaction is settled. If different banks
     # then only every fourth period is settled.
     # -------------------------------------------------------------------------
-    def write_cbdc_transactions(self,  environment, time):
-        # Set Date Time from time
-        year,julian = [2021,time]
-        date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
-        # Year Month Day
-        year = int(date_time.strftime("%y"))
-        month = date_time.strftime("%m")
-        day = date_time.strftime("%d")
-        # Find last day of month
-        end_day = (datetime.date(year + int(int(month)/12), int(month)%12+1, 1) -datetime.timedelta(days=1)).strftime("%d")
+    # def write_cbdc_transactions(self,  environment, time):
+    #     # Set Date Time from time
+    #     year,julian = [2021,time]
+    #     date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
+    #     # Year Month Day
+    #     year = int(date_time.strftime("%y"))
+    #     month = date_time.strftime("%m")
+    #     day = date_time.strftime("%d")
+    #     # Find last day of month
+    #     end_day = (datetime.date(year + int(int(month)/12), int(month)%12+1, 1) -datetime.timedelta(days=1)).strftime("%d")
 
-        if time > 0:
-        # Repay loans and contracts expire on the last day of the month
-            if end_day == day:
-                # Record CBDC Transactions
-                import json
-                file_cbdc = str('cbdc_transactions/cbdc_dict_' + month + '.json')
-                with open(file_cbdc, 'w') as cbdc:
-                    json.dump(environment.cbdc_transactions, cbdc)
-                environment.cbdc_transactions = []
+    #     if time > 0:
+    #     # Repay loans and contracts expire on the last day of the month
+    #         if end_day == day:
+    #             # Record CBDC Transactions
+    #             import json
+    #             file_cbdc = str('cbdc_transactions/cbdc_dict_' + month + '.json')
+    #             with open(file_cbdc, 'w') as cbdc:
+    #                 json.dump(environment.cbdc_transactions, cbdc)
+    #             environment.cbdc_transactions = []
     # -------------------------------------------------------------------------
 
 

@@ -113,8 +113,10 @@ class Household(BaseAgent):
         #self.parameters["active"] = 0  # this is a control parameter checking whether bank is active
         # The below is not needed, but kept just in case it will become needed
         # self.state_variables["sweep_labour"] = 0.0  # labour left in the simulation step
-        self.assets = ["capital_firm", "capital_bank", "deposits", "cbdc", "bank_notes", "output_agreement"]
-        self.liabilities = ["equity", "loans", "wage_agreement"]
+        self.assets = ["deposits", "cbdc", "bank_notes", "receivables"] #self.assets = ["equity_firm", "equity_bank", "deposits", "cbdc", "bank_notes"]
+        self.liabilities = ["loans"]
+        self.equity_firm = 0.0
+        self.equity_bank = 0.0
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -176,53 +178,39 @@ class Household(BaseAgent):
 
     # -------------------------------------------------------------------------
     # hh_asset_endowment
-    # household takes out loan at bank
+    # household creates deposits at bank equal to endowed wealth. Household then
+    # determines level of liquid deposits for the month, the remained of wealth 
+    # is evenly split between firm and bank capital
     # -------------------------------------------------------------------------
     def hh_asset_endowment(self, environment, time):
+        import random
+        from numpy import floor
         bank_acc = list(environment.bank_network.adj[self.identifier])[0]
         firm_acc = list(environment.employment_network.adj[self.identifier])[0]
-        # Allocate Equity
-        equity_tranx = {"type_": "equity", "from_" : self.identifier, "bank_from": "", "to" : self.identifier, "bank_to" : "", "amount" : self.equity, "time" : time}
-        environment.new_transaction(type_=equity_tranx["type_"], asset='', from_= equity_tranx["from_"], to = equity_tranx["to"], amount = equity_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        # Capitalize firms
-        equity_firm_tranx = {"type_": "capital_firm", "from_" : firm_acc, "to" : self.identifier, "amount" : self.equity/2, "time" : time}
-        environment.get_agent_by_id(firm_acc).firm_capitalize(environment, equity_firm_tranx, time)
+        firm_bank_acc = list(environment.bank_network.adj[firm_acc])[0]
+        # Create bank notes equal to total endowed wealth
+        bank_notes = self.wealth 
+        endowment_tranx = {"type_": "bank_notes", "from_" : self.identifier, "bank_from": "central_bank", "to" : self.identifier, "bank_to" : "central_bank", "amount" : bank_notes, "time" : time}
+        environment.central_bank[0].initialize_bank_notes(environment, endowment_tranx, time)
+
+
+        # Determine asset allocation
+        liquid_deposits = floor(30 * round(random.uniform(0.6, 1.6), 2))
+        # Remainder of wealth divided between firm and bank capital
+        equity_firm_amount = floor((bank_notes - liquid_deposits)/2)
+        equity_bank_amount = bank_notes - liquid_deposits - equity_firm_amount
         # Capitalize banks
-        equity_bank_tranx = {"type_": "capital_bank", "from_" : bank_acc, "bank_from": bank_acc, "to" : self.identifier, "bank_to" : bank_acc, "amount" : self.equity/2, "time" : time}
+        equity_bank_tranx = {"type_": "equity_bank", "from_" : bank_acc, "bank_from": bank_acc, "to" : self.identifier, "bank_to" : bank_acc, "amount" : equity_bank_amount, "time" : time}
         environment.get_agent_by_id(bank_acc).bank_capitalize(environment, equity_bank_tranx, time)
-        #print(self.balance_sheet())
-        # Create Loan Account at Bank
-        loan_amount = self.labour + self.equity
-        loan_tranx = {"type_": "loans", "from_" : self.identifier, "bank_from": bank_acc, "to" : bank_acc, "bank_to" : bank_acc, "amount" : loan_amount, "time" : time}
-        environment.get_agent_by_id(bank_acc).new_loan(environment, loan_tranx)
-        #print(self.balance_sheet())
-    # -------------------------------------------------------------------------
-
-
-    # -------------------------------------------------------------------------
-    # hh_asset_allocation
-    # household chooses proportion of endowment held in bank deposits, CBDC and
-    # in bank notes
-    # -------------------------------------------------------------------------
-    def hh_asset_allocation(self, environment, time):
-        import random
-        # Decide on asset allocation
-        self.asset_prop = {"deposits":1, "cbdc":0, "bank_notes":0.0}
-        # Decide on Deposits
-        deposits = self.get_account("deposits") * self.asset_prop["deposits"] #random.uniform(0.4, 0.8)   #### Use this to set asset allowcation to only deposits
-        # Decide on CBDC
-        cbdc = self.get_account("deposits") * self.asset_prop["cbdc"] # random.uniform(0.5, 1)  #### Use this to set asset allowcation to only CBDC
-        # Remainder to bank_notes
-        bank_notes = (self.get_account("deposits") - deposits - cbdc)
-        # Purchase CBDC from Deposits at Bank with Central Bank
-        bank_acc = list(environment.bank_network.adj[self.identifier])[0]
-        cbdc_allocation = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : "central_bank", "bank_to" : "central_bank", "amount" : cbdc, "time" : time}
-        environment.get_agent_by_id(bank_acc).cbdc_exchange(environment, cbdc_allocation, time)
-        # Create Bank_notes at Central Bank
-        bank_notes_allocation = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : "central_bank", "bank_to" : "central_bank", "amount" : bank_notes, "time" : time}
-        environment.get_agent_by_id(bank_acc).bank_notes_purchase(environment, bank_notes_allocation, time)
-        print(f"\n{self.identifier} chose {deposits} deposits, {cbdc} cbdc, and {bank_notes} bank_notes")
-        #print(self.balance_sheet())
+        self.equity_bank = equity_bank_amount
+        # Capitalize firms
+        equity_firm_tranx = {"type_": "equity_firm", "from_" : firm_acc, "to" : self.identifier, "amount" : equity_firm_amount, "time" : time}
+        environment.get_agent_by_id(firm_acc).firm_capitalize(environment, equity_firm_tranx, time)
+        self.equity_firm = equity_firm_amount
+        # Allocate Endowment and create bank balance
+        endowment_tranx = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : self.identifier, "bank_to" : bank_acc, "amount" : liquid_deposits, "time" : time}
+        environment.get_agent_by_id(bank_acc).bank_notes_to_deposits(environment, endowment_tranx, time)
+        print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -230,9 +218,20 @@ class Household(BaseAgent):
     # make payment using deposits with bank
     # -------------------------------------------------------------------------
     def deposits_payment(self, environment, tranx, time):
-        # Request deposit payment with bank
-        bank_acc = list(environment.bank_network.adj[self.identifier])[0]
-        environment.get_agent_by_id(bank_acc).make_payment(environment, tranx, time)
+        deposits_remain = self.get_account("deposits")
+        # If transaction amount is greater than remaining deposits, household takes
+        # out new loan for residual amount
+        if tranx["amount"] > deposits_remain:
+            loan_amount = tranx["amount"] - deposits_remain
+            # New loan
+            self.loan_new(environment, loan_amount, time)
+            # Request deposit payment with bank
+            bank_acc = list(environment.bank_network.adj[self.identifier])[0]
+            environment.get_agent_by_id(bank_acc).make_payment(environment, tranx, time)
+        else: 
+            # Request deposit payment with bank
+            bank_acc = list(environment.bank_network.adj[self.identifier])[0]
+            environment.get_agent_by_id(bank_acc).make_payment(environment, tranx, time)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -253,49 +252,27 @@ class Household(BaseAgent):
         environment.get_agent_by_id("central_bank").make_bank_notes_payment(environment, tranx, time)
     # -------------------------------------------------------------------------
 
-
     # -------------------------------------------------------------------------
-    # initiate_payment
-    # initiate payment and details of payment
-    # Payment amount is random portion of total assets (deposits + CBDC)
-    # Payment to HH with same bank, preference for deposits, if payment less than 
-    # deposits balance, pay only in deposits, otherwise pay all deposits and 
-    # rest with cbdc.
-    # Payment to HH with different bank, preference for CBDC, if payment less than  
-    # CBDC balance, pay only in CBDC, otherwise pay all CBDC and rest with deposits
+    # loan_repay
+    # household repays loans
     # -------------------------------------------------------------------------
-    def initiate_payment(self, environment, time):
-        if (self.equity*0.5) < self.get_account("equity"):
-            import networkx as nx
-            import random
-            bank_acc = list(environment.bank_network.adj[self.identifier])[0]
-            # Select random edge from household making payments edges
-            if len(environment.social_network.edges(self.identifier)) > 0:
-                to_household = random.sample(list(environment.social_network.edges(self.identifier)), 1)[0][1]
-                to_bank_acc = list(environment.bank_network.adj[to_household])[0]
-                # Payment is a random uniform proportion of the households positive balance
-                total_assets = self.get_account("deposits") + self.get_account("cbdc") + self.get_account("bank_notes")
-                
-                if total_assets - self.get_account("equity") > 0.0:
-                    print(f"\n PAYMENT SHOCK!!! \n ")
-                    payment = self.get_account("equity") * random.uniform(0.2, 0.7)
-                    # Transfer equity between households representing expense or income from transaction
-                    equity_tranx = {"type_": "equity", "from_" : self.identifier, "to" : to_household, "amount" : payment, "time" : time}
-                    environment.new_transaction(type_=equity_tranx["type_"], asset='', from_=equity_tranx["to"], to=equity_tranx["from_"], amount=equity_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1) 
-                    print(f"\n{self.identifier} transferred {payment} units of equity to {to_household} at time {time}.")
-                    # Payment to household in Deposits
-                    deposit_portion = payment * self.asset_prop["deposits"]
-                    tranx_deposits = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : to_household, "bank_to" : to_bank_acc, "amount" : deposit_portion, "time" : time}
-                    self.deposits_payment(environment, tranx_deposits, time)
-                    environment.total_payments += deposit_portion
-                    # Payment to household in CBDC
-                    cbdc_portion = payment * self.asset_prop["cbdc"]
-                    tranx = {"type_": "cbdc", "from_" : self.identifier, "bank_from": "central_bank", "to" : to_household, "bank_to" : "central_bank", "amount" : cbdc_portion, "time" : time}
-                    self.cbdc_payment(environment, tranx, time)
-                    environment.total_payments += cbdc_portion
+    def loan_repay(self, environment, time):
+        bank_acc = list(environment.bank_network.adj[self.identifier])[0]
+        loan_amount = self.get_account("loans")
+        loan_tranx = {"type_": "loans", "from_" : self.identifier, "bank_from": bank_acc, "to" : self.identifier, "bank_to" : bank_acc, "amount" : loan_amount, "time" : time}
+        environment.get_agent_by_id(bank_acc).repay_loan(environment, loan_tranx)
     # -------------------------------------------------------------------------
 
-    # 
+    # -------------------------------------------------------------------------
+    # loan_new
+    # household takes out new loans
+    # -------------------------------------------------------------------------
+    def loan_new(self, environment, loan_amount, time):
+        bank_acc = list(environment.bank_network.adj[self.identifier])[0]
+        loan_tranx = {"type_": "loans", "from_" : self.identifier, "bank_from": bank_acc, "to" : bank_acc, "bank_to" : bank_acc, "amount" : loan_amount, "time" : time}
+        environment.get_agent_by_id(bank_acc).new_loan(environment, loan_tranx)
+    # -------------------------------------------------------------------------
+
 
     # -------------------------------------------------------------------------
     # get_new_savings
@@ -317,29 +294,26 @@ class Household(BaseAgent):
             assets[item] = round(self.get_account(item), 5)
         for item in self.liabilities:
             liabilities[item] = round(self.get_account(item), 5)
-
+        assets["equity_firm"] = self.equity_firm
+        assets["equity_bank"] = self.equity_bank
         balance_sheet["assets"] = assets
         balance_sheet["liabilities"] = liabilities
         balance_sheet = {self.identifier: balance_sheet}
         return balance_sheet
-
     # -------------------------------------------------------------------------
 
 
     # -------------------------------------------------------------------------
-    # check_consistency
-    # checks whether the assets and liabilities have the same total value
+    # check_npv
+    # check net present value given as assets minus liabilities
     # -------------------------------------------------------------------------
-    def check_consistency(self):
-        import numpy as np 
+    def check_npv(self):
+        # Check net present value given as assets minus liabilities
         balance_sheet = self.balance_sheet()
-        assets_round = round(sum(balance_sheet[self.identifier]["assets"].values()), 0)
-        liabilities_floor = round(sum(balance_sheet[self.identifier]["liabilities"].values()), 0)
-        balance_sheet = self.balance_sheet()
-        assets = np.floor(sum(balance_sheet[self.identifier]["assets"].values()))
-        liabilities = np.floor(sum(balance_sheet[self.identifier]["liabilities"].values()))
-
-        return (assets == liabilities or assets_round == liabilities_floor)
+        assets_total = sum(balance_sheet[self.identifier]["assets"].values())
+        liabilities_total= sum(balance_sheet[self.identifier]["liabilities"].values())
+        npv = round(assets_total - liabilities_total, 1)
+        return {self.identifier: {"npv": npv}}
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -348,7 +322,6 @@ class Household(BaseAgent):
     # -------------------------------------------------------------------------
     def get_account(self,  type_):
         volume = 0.0
-
         for transaction in self.accounts:
             if transaction.type_ in self.assets:
                 if (transaction.type_ == type_) & (transaction.from_.identifier == self.identifier):
@@ -360,7 +333,6 @@ class Household(BaseAgent):
                     volume = volume + float(transaction.amount)
                 elif (transaction.type_ == type_) & (transaction.from_.identifier != self.identifier):
                     volume = volume - float(transaction.amount)
-
         return volume
     # -------------------------------------------------------------------------
 

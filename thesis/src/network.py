@@ -86,6 +86,30 @@ class Network(object):
 			# Create edge between household and firm
 			firm_id = random.sample(environment.firms, 1)[0].identifier
 			self.employment_network.add_edge(house.identifier, firm_id)
+
+		# Make sure all firms have at least one household
+		hh_count = []
+		firm_id = []
+		for firm in environment.firms:
+			households = list(self.employment_network.adj[firm.identifier])
+			firm_id.append(firm.identifier)
+			hh_count.append(len(households)) 
+		while min(hh_count) == 0:
+			firm_min_id = firm_id[hh_count.index(min(hh_count))]
+			firm_max_id = firm_id[hh_count.index(max(hh_count))]
+
+			household_max = list(self.employment_network.adj[firm_max_id])[0]
+
+			self.employment_network.add_edge(household_max, firm_min_id)
+			self.employment_network.remove_edge(household_max, firm_max_id)
+
+			hh_count = []
+			firm_id = []
+
+			for firm in environment.firms:
+				households = list(self.employment_network.adj[firm.identifier])
+				firm_id.append(firm.identifier)
+				hh_count.append(len(households)) 
 	#-------------------------------------------------------------------------
 
 	#-------------------------------------------------------------------------
@@ -94,20 +118,34 @@ class Network(object):
 	# between households and all firms
 	#-------------------------------------------------------------------------    
 	def initialize_consumption_network(self,  environment):
+		from random import sample
+		from numpy import floor
 		# Create networkx graph instance
 		self.consumption_network = nx.Graph()
-		# Loop through firms adding nodes to network
-		for firm in environment.firms:
-			self.consumption_network.add_node(firm.identifier, id = "firm")
-		# Loop through households adding to network and adding edge between 
-		# household and firm where it works
+		# Loop through households adding nodes to network
 		for house in environment.households:
-			# Add household to network
 			self.consumption_network.add_node(house.identifier, id = "household")
-			for node in self.consumption_network.nodes(data=True):
-				if node[1]["id"] == "firm":
-					# Create edge between household and firm
-					self.consumption_network.add_edge(house.identifier, node[0])
+
+		# firms and household that are in this consumption neighbourhood
+		for firm in environment.firms:
+			# Add household to network
+			self.consumption_network.add_node(firm.identifier, id = "firm")
+			# Create edge between firm and random households
+			# connect random number of households between a third and all households
+			# to firm for consumption neighbourhood
+			num_hh = len(environment.households)
+			hh_sample_size = list(range(int(floor(num_hh/3)), num_hh))
+			households_id = sample(environment.households, sample(hh_sample_size, 1)[0])
+			for id_ in households_id:
+				self.consumption_network.add_edge(firm.identifier, id_.identifier)
+
+		# Make sure all households have at least one firm
+		for house in environment.households:
+			firms = list(self.consumption_network.adj[house.identifier])
+			firm_count = len(firms)
+			if firm_count == 0:
+				firm_id = sample(environment.firms, 1)[0].identifier
+				self.consumption_network.add_edge(firm_id, house.identifier)
 	#-------------------------------------------------------------------------
 
 	#-------------------------------------------------------------------------
@@ -136,6 +174,31 @@ class Network(object):
 			# Create edge between firm and bank
 			bank_id = random.sample(environment.banks, 1)[0].identifier
 			self.bank_network.add_edge(firm.identifier, bank_id)
+
+
+		# Make sure all banks have at least one household or firm
+		agent_count = []
+		bank_id = []
+		for bank in environment.banks:
+			agents = list(self.bank_network.adj[bank.identifier])
+			bank_id.append(bank.identifier)
+			agent_count.append(len(agents)) 
+		while min(agent_count) == 0:
+			bank_min_id = bank_id[agent_count.index(min(agent_count))]
+			bank_max_id = bank_id[agent_count.index(max(agent_count))]
+
+			agent_max = list(self.bank_network.adj[bank_max_id])[0]
+
+			self.bank_network.add_edge(agent_max, bank_min_id)
+			self.bank_network.remove_edge(agent_max, bank_max_id)
+
+			agent_count = []
+			bank_id = []
+
+			for bank in environment.banks:
+				agents = list(self.bank_network.adj[bank.identifier])
+				bank_id.append(bank.identifier)
+				agent_count.append(len(agents)) 
 	#-------------------------------------------------------------------------
 
 #

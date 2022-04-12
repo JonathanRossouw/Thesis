@@ -21,6 +21,7 @@ along with this program. If not, see <http://www.gnu.org/licenses/>.
 """
 
 import logging
+from posix import environ
 from abm_template.src.basemeasurement import BaseMeasurement
 
 # ============================================================================
@@ -170,31 +171,70 @@ class Measurement(BaseMeasurement):
             if tranx.type_ == "cbdc":
                 cbdc_balance += tranx.amount
 
-        for banks in self.environment.banks:
-            for tranx in banks.accounts:
-                if tranx.type_ == "deposits":
-                    deposits_balance += tranx.amount
-
-        gdp = 0
-        for firm in self.environment.firms:
-            gdp += firm.get_account("output_agreement")
-        for house in self.environment.households:
-            gdp += house.get_account("wage_agreement")
-
         if ident == "current_step":
             return self.runner.current_step+1
             
         if ident == "total_output":
             return self.environment.total_output
 
-        if ident == "deposits_payments":
-            return deposits_balance
+        if ident == "total_deposit_payments":
+            return self.environment.total_deposit_payments
+
+        if ident == "deposit_payments":
+            if len(self.environment.deposits_period) == 1:
+                return self.environment.deposits_period[0]
+            # elif len(self.environment.deposits_period) == 2:
+            #     return self.environment.deposits_period[1]
+            else:
+                return self.environment.deposits_period[-1] - self.environment.deposits_period[-2]
+
+        if ident == "bank_0":
+            deposits = 0
+            bank_acc = self.environment.get_agent_by_id("bank_0").bank_accounts
+            for acc in bank_acc:
+                deposits += bank_acc[acc]["deposits"]
+            return deposits
+
+        if ident == "bank_1":
+            deposits = 0
+            bank_acc = self.environment.get_agent_by_id("bank_1").bank_accounts
+            for acc in bank_acc:
+                deposits += bank_acc[acc]["deposits"]
+            return deposits
+
+        if ident == "bank_2":
+            deposits = 0
+            bank_acc = self.environment.get_agent_by_id("bank_2").bank_accounts
+            for acc in bank_acc:
+                deposits += bank_acc[acc]["deposits"]
+            return deposits
+
+        if ident == "bank_3":
+            deposits = 0
+            bank_acc = self.environment.get_agent_by_id("bank_3").bank_accounts
+            for acc in bank_acc:
+                deposits += bank_acc[acc]["deposits"]
+            return deposits
+
+        if ident == "total_deposits":
+            total_deposits = 0
+            for bank in self.environment.banks:
+                total_deposits += bank.get_account("deposits")
+            return total_deposits
+
+        if ident == "receivables":
+            total_receivables = 0
+            for bank in self.environment.banks:
+                total_receivables += bank.get_account("receivables")
+            return total_receivables
+
+        if ident == "loans":
+            total_loans = 0
+            for bank in self.environment.banks:
+                total_loans += bank.get_account("loans")
+            return total_loans
 
         if ident == "cbdc_payments":
             return cbdc_balance
-
-        if ident == "total_payments":
-            return gdp
-
 
     # -------------------------------------------------------------------------

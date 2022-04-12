@@ -1,7 +1,14 @@
 <measurement identifier='test_output'>
     <parameter type='filename' value='measurements/TestMeasurement.csv'></parameter>
     <parameter type='output' column='1' header='Step' value='current_step'></parameter>
-    <parameter type='output' column='2' header='CBDC_Payments' value='cbdc_payments' ></parameter>
-    <parameter type='output' column='3' header='Deposits_Payments' value='deposits_payments' ></parameter>
+    <parameter type='output' column='2' header='Total Deposit Payments' value='total_deposit_payments' ></parameter>
+    <parameter type='output' column='3' header='Deposit Payments' value='deposit_payments' ></parameter>
     <parameter type='output' column='4' header='Total Output' value='total_output' ></parameter>
+    <parameter type='output' column='5' header='Bank 0 Deposits' value='bank_0' ></parameter>
+    <parameter type='output' column='6' header='Bank 1 Deposits' value='bank_1' ></parameter>
+    <parameter type='output' column='7' header='Bank 2 Deposits' value='bank_2' ></parameter>
+    <parameter type='output' column='8' header='Bank 3 Deposits' value='bank_3' ></parameter>
+    <parameter type='output' column='9' header='Total Deposits' value='total_deposits' ></parameter>
+    <parameter type='output' column='10' header='Total Loans' value='loans' ></parameter>
+    <parameter type='output' column='11' header='Total Receivables' value='receivables' ></parameter>
 </measurement>

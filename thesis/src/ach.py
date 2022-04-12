@@ -46,6 +46,7 @@ class ACH(BaseAgent):
 
     batches = {}  # Store transactions for batching
     collateral = {} # Record bank collateral
+    banks = []
 
     #
     #
@@ -111,10 +112,11 @@ class ACH(BaseAgent):
         # CONVERSELY, IF YOU WANT TO READ THE VALUE, DON'T USE THE FULL NAMES
         # INSTEAD USE __getattr__ POWER TO CHANGE THE COMMAND FROM
         # instance.static_parameters["xyz"] TO instance.xyz - THE LATTER IS PREFERRED
-        self.assets = ["loans"]
-        self.liabilities = ["ach_deposits"]
+        self.assets = ["ach_payer", "reserves"]
+        self.liabilities = ["ach_payee"]
         self.batches = {}
         self.collateral = {}
+        self.banks = []
 
         
     # -------------------------------------------------------------------------
@@ -155,44 +157,104 @@ class ACH(BaseAgent):
 
 
     # -------------------------------------------------------------------------
+    # make_ach_payment
+    # takes in transaction details from household or firms and makes payment
+    # -------------------------------------------------------------------------
+    def make_ach_payment(self, environment, tranx, time):
+        # Payers bank debits on ACH account
+        tranx_payer = "ach_payer_" + tranx["bank_from"]
+        environment.new_transaction(type_=tranx_payer, asset='', from_= tranx["bank_from"], to = "ach", amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+
+        # Payees bank credits on ACH account
+
+        tranx_payee = "ach_payee_" + tranx["bank_to"]
+        environment.new_transaction(type_=tranx_payee, asset='', from_= "ach", to = tranx["bank_to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+
+        # Payees bank debits ACH account and credits payees receivables account
+
+        environment.new_transaction(type_="receivables", asset='', from_= tranx["bank_to"], to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        environment.get_agent_by_id(tranx["bank_to"]).bank_accounts[tranx["to"]]["receivables"] += tranx["amount"]
+        print(f"{tranx['amount']} paid from {tranx['from_']} to {tranx['to']} via ach and {tranx['bank_from']} and {tranx['bank_to']}")
+    # -------------------------------------------------------------------------
+
+
+    # -------------------------------------------------------------------------
     # batch_settle
     # determine which banks have positive and negative batch accounts
     # -------------------------------------------------------------------------
     def batch_settle(self, environment, time):
-        # Import market
-        from src.market import Market
-        # Aggregate payments and determine balances
-        for banks in self.batches:
-            self.batches[banks] = sum(self.batches[banks])
-        # Create list of balances for rationing
-        batches_ration = []
-        for key, value in self.batches.items():
-            batches_ration.append([key, value])
-        # Perform rationing
-        mark = Market(environment)
-        ach_settle = mark.rationing(batches_ration)
-        # Loop through rationing tranactions and call interbank settlement mtheod to net reserve payments
-        for tranx in ach_settle:
-            # Transfer Reserves between banks
-            rgts_tranx = {"bank_from":tranx[0], "bank_to":tranx[1], "amount":tranx[2]}
-            environment.get_agent_by_id("central_bank").rgts_payment(environment, rgts_tranx, time)
-            print(f"\n {tranx[0]} settled {tranx[1]} worth of reserves to {tranx[2]} \n")
-        for bank in environment.banks:
-        # Transfer ACH deposits
-            ach_deposits = bank.get_account("ach_deposits")
-            bank_id = bank.identifier
-            environment.new_transaction(type_="ach_deposits", asset='', from_="ach", to=bank_id, amount=ach_deposits, interest=0.00, maturity=0, time_of_default=-1)
-            print(f"\n ACH settled {ach_deposits} worth of ACH deposits to {bank_id} \n")
-        # Return bank collateral
-        for bank in self.collateral:
-            collateral_amount = self.collateral[bank]
-            environment.new_transaction(type_="loans", asset='', from_=self.identifier, to=bank, amount=collateral_amount, interest=0.00, maturity=0, time_of_default=-1)
-            self.collateral[bank] = 0
-        # Reset batches
-        for bank in self.batches:
-            # Transfer collateral 
-            self.batches[bank] = []
+        # Determine net payers and net payees
+        payer = {}
+        payee = {}
+        for bank in self.banks:
+            balance = self.get_account("ach_payer_" + bank) - self.get_account("ach_payee_" + bank)
+            if balance > 0:
+                payer[bank] = balance
+            elif balance < 0:
+                payee[bank] = abs(balance)
+        
+        # Loop through ACH_payer accounts, call rtgs payment from bank to ACH
+        for item in payer:
+            # Reverse ach transactions at banks
+            bank_payee = self.get_account("ach_payee_" + item)
+            bank_payer = self.get_account("ach_payer_" + item)
+            environment.new_transaction(type_="ach_payee_"+item, asset='', from_=item, to="ach", amount=bank_payee, interest=0.00, maturity=0, time_of_default=-1)
+            environment.new_transaction(type_="ach_payer_"+item, asset='', from_="ach", to=item, amount=bank_payer, interest=0.00, maturity=0, time_of_default=-1)
+            # Transfer balance of reserves from bank to ach
+            payer_tranx = {"type_": "reserves", "amount" : payer[item], "bank_from":item, "bank_to":"ach", "time" : time}
+            environment.get_agent_by_id("central_bank").rgts_payment(environment, payer_tranx, time)        
+        # Loop through ACH_payee accounts, call rtgs payment from ACH to bank
+        for item in payee:
+            # Reverse ach transactions at banks
+            bank_payee = self.get_account("ach_payee_" + item)
+            bank_payer = self.get_account("ach_payer_" + item)
+            environment.new_transaction(type_="ach_payee_"+item, asset='', from_=item, to="ach", amount=bank_payee, interest=0.00, maturity=0, time_of_default=-1)
+            environment.new_transaction(type_="ach_payer_"+item, asset='', from_="ach", to=item, amount=bank_payer, interest=0.00, maturity=0, time_of_default=-1)
+            # Transfer balance of reserves from ach to bank
+            payee_tranx = {"type_": "reserves", "amount" : payee[item], "bank_from":"ach", "bank_to":item, "time" : time}
+            environment.get_agent_by_id("central_bank").rgts_payment(environment, payee_tranx, time)
     # -------------------------------------------------------------------------
+
+
+    # # -------------------------------------------------------------------------
+    # # batch_settle
+    # # determine which banks have positive and negative batch accounts
+    # # -------------------------------------------------------------------------
+    # def batch_settle(self, environment, time):
+    #     # Import market
+    #     from src.market import Market
+    #     # Aggregate payments and determine balances
+    #     for banks in self.batches:
+    #         self.batches[banks] = sum(self.batches[banks])
+    #     # Create list of balances for rationing
+    #     batches_ration = []
+    #     for key, value in self.batches.items():
+    #         batches_ration.append([key, value])
+    #     # Perform rationing
+    #     mark = Market(environment)
+    #     ach_settle = mark.rationing(batches_ration)
+    #     # Loop through rationing tranactions and call interbank settlement mtheod to net reserve payments
+    #     for tranx in ach_settle:
+    #         # Transfer Reserves between banks
+    #         rgts_tranx = {"bank_from":tranx[0], "bank_to":tranx[1], "amount":tranx[2]}
+    #         environment.get_agent_by_id("central_bank").rgts_payment(environment, rgts_tranx, time)
+    #         print(f"\n {tranx[0]} settled {tranx[1]} worth of reserves to {tranx[2]} \n")
+    #     for bank in environment.banks:
+    #     # Transfer ACH deposits
+    #         ach_deposits = bank.get_account("ach_deposits")
+    #         bank_id = bank.identifier
+    #         environment.new_transaction(type_="ach_deposits", asset='', from_="ach", to=bank_id, amount=ach_deposits, interest=0.00, maturity=0, time_of_default=-1)
+    #         print(f"\n ACH settled {-ach_deposits} worth of ACH deposits to {bank_id} \n")
+    #     # Return bank collateral
+    #     for bank in self.collateral:
+    #         collateral_amount = self.collateral[bank]
+    #         environment.new_transaction(type_="loans", asset='', from_=self.identifier, to=bank, amount=collateral_amount, interest=0.00, maturity=0, time_of_default=-1)
+    #         self.collateral[bank] = 0
+    #     # Reset batches
+    #     for bank in self.batches:
+    #         # Transfer collateral 
+    #         self.batches[bank] = []
+    # # -------------------------------------------------------------------------
 
 
 
@@ -205,9 +267,22 @@ class ACH(BaseAgent):
         assets = {}
         liabilities = {}
         for item in self.assets:
-            assets[item] = self.get_account(item)
+            assets[item] = 0
+            if "ach" in item:
+                for bank in self.banks:
+                    account = "ach_payer_" + bank
+                    assets[item] += self.get_account(account)
+            else:
+                assets[item] += self.get_account(item)
+
         for item in self.liabilities:
-            liabilities[item] = self.get_account(item)
+            liabilities[item] = 0
+            if "ach" in item:
+                for bank in self.banks:
+                    account = "ach_payee_" + bank
+                    liabilities[item] += self.get_account(account)
+            else:
+                assets[item] += self.get_account(item)
 
         balance_sheet["assets"] = assets
         balance_sheet["liabilities"] = liabilities
@@ -240,13 +315,25 @@ class ACH(BaseAgent):
     def get_account(self,  type_):
         volume = 0.0
 
+        assets = []
+        for item in self.assets:
+            for bank in self.banks:
+                account_payer = item + "_" + bank
+                assets.append(account_payer)
+
+        liabilities = []
+        for item in self.liabilities:
+            for bank in self.banks:
+                account_payee = item + "_" + bank
+                liabilities.append(account_payee)
+
         for transaction in self.accounts:
-            if transaction.type_ in self.assets:
+            if transaction.type_ in assets:
                 if (transaction.type_ == type_) & (transaction.from_.identifier == self.identifier):
                     volume = volume - float(transaction.amount)
                 elif (transaction.type_ == type_) & (transaction.from_.identifier!= self.identifier):
                     volume = volume + float(transaction.amount)
-            elif transaction.type_ in self.liabilities:
+            elif transaction.type_ in liabilities:
                 if (transaction.type_ == type_) & (transaction.from_.identifier == self.identifier):
                     volume = volume + float(transaction.amount)
                 elif (transaction.type_ == type_) & (transaction.from_.identifier != self.identifier):

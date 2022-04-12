@@ -72,14 +72,14 @@ class Generate_Agents:
 			# the following code ensures leading zeros so filenames will be in the right order
 			# for python to read in. Also, bank names are sorted properly in activeBanks of madfimas
 			# this code is ugly, but works...
-			labour = round((4000 * np.random.lognormal(0, 0.4, 1))[0], 3)
+			wealth = round((100 * np.random.lognormal(0, 0.2, 1))[0], 0)
 			householdfileName += ".xml"
 			outFile = open(householdfileName,  'w')
 			text = "<?xml version='1.0' encoding='UTF-8'?>\n"
 			text = text + "<household identifier= '" + identifier + "'>\n"
-			text = text + "    <parameter name='equity' value='" + str(labour) + "'></parameter>\n"
-			text = text + "    <parameter name='labour' value='" + str(labour) + "'></parameter>\n"
-			text = text + "    <parameter name='propensity_to_save' value='0.4'></parameter>\n"
+			text = text + "    <parameter name='npv' value='" + str(wealth) + "'></parameter>\n"
+			text = text + "    <parameter name='wealth' value='" + str(wealth) + "'></parameter>\n"
+			text = text + "    <parameter name='labour' value='1'></parameter>\n"
 			text = text + "</household>\n"
 			outFile.write(text)
 			outFile.close()
@@ -106,7 +106,6 @@ class Generate_Agents:
 			text = "<?xml version='1.0' encoding='UTF-8'?>\n"
 			text = text + "<firm identifier= '" + identifier + "'>\n"
 			text = text + "    <parameter name='endowment' value='0.0'></parameter>\n"
-			text = text + "    <parameter name='propensity_to_save' value='0.4'></parameter>\n"
 			text = text + "</firm>\n"
 			outFile.write(text)
 			outFile.close()
@@ -131,7 +130,6 @@ class Generate_Agents:
 			# this code is ugly, but works...
 			bankfileName += ".xml"
 			outFile = open(bankfileName,  'w')
-
 			text = "<?xml version='1.0' encoding='UTF-8'?> \n"
 			text = text + "<bank identifier= 'bank_" + str(i) + "'>\n"
 			text = text + "    <parameter type='static' name='interest_rate_loans' value='0.00'></parameter>\n"

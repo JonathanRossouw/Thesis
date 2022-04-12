@@ -48,8 +48,9 @@ class Environment(BaseConfig):
     deposits_payments = 0 # Total payments made with Deposits
     cbdc_payments = 0 # Total payments made with CBDC
     total_payments = 0 # Measurement of total activity
+    total_deposit_payments = 0
+    deposits_period = []
     total_output = 0 # Measurement of total output
-
     cbdc_transactions = []
 
     # Frequency of batching
@@ -502,18 +503,18 @@ class Environment(BaseConfig):
     def initialize_network(self):
         from src.network import Network
         # Create network instances
-        social_network_struc = Network(self)
+        #social_network_struc = Network(self)
         employment_network_struc = Network(self)
         consumption_network_struc = Network(self)
         bank_network_struc = Network(self)
         # Use initialize_networks method from Network class to create networks
         # for employment, consumption, banks and social
-        social_network_struc.initialize_social_network(self)
+        #social_network_struc.initialize_social_network(self)
         employment_network_struc.initialize_employment_network(self)
         consumption_network_struc.initialize_consumption_network(self)
         bank_network_struc.initialize_bank_network(self)
         # Set environment variable networks
-        self.social_network = social_network_struc.social_network
+        #self.social_network = social_network_struc.social_network
         self.employment_network = employment_network_struc.employment_network
         self.consumption_network = consumption_network_struc.consumption_network
         self.bank_network = bank_network_struc.bank_network

@@ -143,6 +143,34 @@ class CentralBank(BaseAgent):
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
+    # initialize_bank_notes
+    # takes in transaction details from household and makes payment
+    # -------------------------------------------------------------------------
+    def initialize_bank_notes(self, environment, tranx, time):
+        # Transfer funds from central bank to household
+        environment.new_transaction(type_="bank_notes", asset='', from_="central_bank", to=tranx["to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+		# We print the action of selling to the screen
+        print(f"\n {tranx['to']} initialize with {tranx['amount']} bank notes")
+        #print(self.balance_sheet())
+        #logging.info("  payments made on step: %s",  time)
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # initialize_reserves
+    # takes in transaction details from household and makes payment
+    # -------------------------------------------------------------------------
+    def initialize_reserves(self, environment, tranx, time):
+        # Transfer funds from bank to central bank
+        environment.new_transaction(type_="bank_notes", asset='', from_=tranx["from_"], to="central_bank", amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        environment.new_transaction(type_="reserves", asset='', from_="central_bank", to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+		# We print the action of selling to the screen
+        print(f"\n {tranx['to']} initialize with {tranx['amount']} reserves")
+        #print(self.balance_sheet())
+        #logging.info("  payments made on step: %s",  time)
+    # -------------------------------------------------------------------------
+
+
+    # -------------------------------------------------------------------------
     # make_bank_notes_payment
     # takes in transaction details from household and makes payment
     # -------------------------------------------------------------------------
@@ -165,12 +193,6 @@ class CentralBank(BaseAgent):
     def rgts_payment(self, environment, tranx, time):
 		# Transfer funds from central bank to bank
         environment.new_transaction(type_="reserves", asset='', from_=tranx["bank_from"], to=tranx["bank_to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-
-        try:
-            environment.get_agent_by_id(tranx["bank_to"]).settle_payment(environment, tranx, time)
-        except KeyError:
-            print("")
-
         print(f"\n RTGS payment of {tranx['amount']} of reserves from {tranx['bank_from']} to {tranx['bank_to']} at time {time}d.")
         #print(self.balance_sheet())
         #logging.info("  payments made on step: %s",  time)
@@ -203,12 +225,20 @@ class CentralBank(BaseAgent):
     # Household exchanges deposits at bank for Bank Notes at Central Bank
     # -------------------------------------------------------------------------
     def bank_notes_settle(self, environment, tranx, time):
-        # Transfer Bank Notes to Household
-        environment.new_transaction(type_="bank_notes", asset='', from_="central_bank", to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        # Transfer Open Market Operations to Bank
-        environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to="central_bank", amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        # Increase Bank Reserves equal to increase Open Market Operations agreement
-        print(f"\n Bank Notes settlement of {tranx['amount']} to {tranx['from_']} complete")
+        if tranx["to"] is "central_bank":
+            # Transfer Bank Notes to Household
+            environment.new_transaction(type_="bank_notes", asset='', from_="central_bank", to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+            # Transfer Open Market Operations to Bank
+            environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to="central_bank", amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+            # Increase Bank Reserves equal to increase Open Market Operations agreement
+            print(f"\n Bank Notes settlement of {tranx['amount']} to {tranx['from_']} complete")
+        elif tranx["to"] != "central_bank":
+            # Transfer Bank Notes to Household
+            environment.new_transaction(type_="bank_notes", asset='', from_="central_bank", to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+            # Transfer Open Market Operations to Bank
+            environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to="central_bank", amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+            # Increase Bank Reserves equal to increase Open Market Operations agreement
+            print(f"\n Bank Notes settlement of {tranx['amount']} to {tranx['from_']} complete")
         #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
@@ -302,7 +332,6 @@ class CentralBank(BaseAgent):
                     volume = volume + float(transaction.amount)
                 elif (transaction.type_ == type_) & (transaction.from_.identifier != self.identifier):
                     volume = volume - float(transaction.amount)
-
         return volume
     # -------------------------------------------------------------------------
 
