@@ -43,7 +43,7 @@ class CentralBank(BaseAgent):
     accounts = []  # all accounts of the central bank (filled with transactions)
     assets = []
     liabilities = []
-    pk = 0
+    bank_accounts = {}
 
     #
     #
@@ -110,8 +110,9 @@ class CentralBank(BaseAgent):
         # INSTEAD USE __getattr__ POWER TO CHANGE THE COMMAND FROM
         # instance.static_parameters["xyz"] TO instance.xyz - THE LATTER IS PREFERRED
         self.parameters["interest_rate_cb_loans"] = 0.0  # interest rate on loans
-        self.assets = ["open_market_operations"]
-        self.liabilities = ["reserves", "cbdc", "bank_notes"]
+        self.assets = ["loans_central_bank"]
+        self.liabilities = ["reserves", "bank_notes"]
+        self.bank_accounts = {}
     # -------------------------------------------------------------------------
 
 
@@ -239,6 +240,24 @@ class CentralBank(BaseAgent):
             environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to="central_bank", amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
             # Increase Bank Reserves equal to increase Open Market Operations agreement
             print(f"\n Bank Notes settlement of {tranx['amount']} to {tranx['from_']} complete")
+        #print(self.balance_sheet())
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # issue_central_bank_loan
+    # bank issues loan to another bank
+    # -------------------------------------------------------------------------
+    def issue_central_bank_loan(self, environment, loan_tranx, time):
+        # Create loan agreement with household
+        environment.new_transaction(type_="loans_central_bank", asset='', from_= loan_tranx["bank_from"], to = self.identifier, amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+        if loan_tranx["bank_from"] in loan_tranx:
+            self.bank_accounts[loan_tranx["bank_from"]]["loans_central_bank"] += loan_tranx["amount"]
+        elif loan_tranx["bank_from"] not in loan_tranx:
+            self.bank_accounts[loan_tranx["bank_from"]] = {"loans_central_bank": loan_tranx["amount"]}
+        # Transfer reserves
+        reserves_tranx = {"type_": "reserves", "amount" : loan_tranx["amount"], "bank_from":self.identifier, "bank_to":loan_tranx["bank_from"], "time" : time}
+        self.rgts_payment(environment, reserves_tranx, time)    
+        print(f"\n {loan_tranx['bank_from']} took out new loan of {loan_tranx['amount']} at {self.identifier}")
         #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 

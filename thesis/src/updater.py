@@ -1,3 +1,4 @@
+from os import environ
 from src.market import Market
 from src.central_bank import CentralBank
 
@@ -101,6 +102,8 @@ class Updater(BaseModel):
         #self.write_cbdc_transactions(environment, time)
         # Purging accounts at every step just in case
         self.update_equity(environment, time)
+        # Loop through banks to determine which have excess reserves and deficit reserves
+        self.check_reserve_requirements(environment, time)
         transaction = Transaction()
         transaction.purge_accounts(environment)
     # -------------------------------------------------------------------------
@@ -324,7 +327,7 @@ class Updater(BaseModel):
                         size -= s   # reduce number of units available
                     supply_frac.append(list(it))    # add remaining units to final household
                     supply_frac = [len(u) for u in  supply_frac]    # count number of units demanded per household
-                    print(supply_frac)
+                    print(f"{node[0]}: {supply_frac}")
                     # Loop through households and number of units allocated and create deposit transaction
                     for house, k in zip(list(G.adj[node[0]]), supply_frac):
                         if k == 0:
@@ -355,6 +358,79 @@ class Updater(BaseModel):
             # Loop through banks
             for bank in environment.banks:
                 bank.settle_ach_payments(environment, time)
+    # -------------------------------------------------------------------------
+
+
+
+    # -------------------------------------------------------------------------
+    # check_reserve_requirements
+    # determine which banks have reserve deficits and which have surplus deficients
+    # for banks with deficits introduce interbank loans from surplus banks
+    # once all surpluses are exhuasted banks take out loans from CB
+    # -------------------------------------------------------------------------
+    def check_reserve_requirements(self, environment, time):
+        if time > 0:
+            # Create list of banks and reserve status
+            bank_deficit = {} # Deficit dict
+            bank_surplus = {} # Surplus dict
+            for bank in environment.banks:
+                reserves = bank.get_account("reserves") # Determine level of reserves
+                ###########
+                required_reserves = 2650 # Needs calibration!!!!
+                ###########
+                res = reserves - required_reserves # Determine whether bank has deficit or surplus reserves
+                if res < 0:
+                    bank_deficit[bank.identifier] = abs(res) # Add bank to deficit dict if applicable
+                elif res > 0:
+                    bank_surplus[bank.identifier] = abs(res) # Add bank to surplus dict if applicable
+
+            bank_deficit = dict(sorted(bank_deficit.items(), reverse=True, key=lambda item: item[1])) # Sort dicts in descending order
+            bank_surplus = dict(sorted(bank_surplus.items(), reverse=True, key=lambda item: item[1])) # Sort dicts in descending order
+
+            print(f"Bank_Deficit \n {bank_deficit}")
+            print(f"Bank_Surplus \n {bank_surplus}")
+            
+            # If any banks have deficit reserves, loop through deficit banks from largest to smallest
+            # and create interbank loan from surplus banks that have largest surplus. Starts with largest 
+            # deficit and largest surplus. If deficit is greater than surplus then all surplus is loaned to 
+            # deficit banks and next surplus is used for further interbank loan. If surplus is larger than 
+            # deficit, then interbank loan size of deficit is created and next deficit bank is called.
+            # Loop continues until all deficits are overcome through interbank loans or no more surplus remains
+            # and banks go to central bank for CB loans to ensure reserve requirements are met
+
+            if len(bank_deficit) > 0: # Check if any deficit banks
+                for bank, value in dict(bank_deficit).items():  # Loop through deficit bank dict
+                    bank_neighbours = environment.interbank_network.adj[bank] # Determine which banks are in deficit banks funding neighbourhood
+                    for bank_surp, value in dict(bank_surplus).items(): # Loop through surplus banks
+                        if bank_surp in bank_neighbours: # Check if surplus bank is in funding neighbourhood
+                            res_def = bank_deficit[bank] - bank_surplus[bank_surp] # Determine deficit and surplus residual
+                            if res_def < 0: # Check is surplus is larger than deficit
+                                # Create interbank loan the size of entire deficit
+                                interbank_loan_tranx = {"type_": "interbank_loan", "bank_from": bank, "bank_to" : bank_surp, "amount" : bank_deficit[bank], "time" : time}
+                                environment.get_agent_by_id(bank_surp).issue_interbank_loan(environment, interbank_loan_tranx, time)
+                                # Reduce bank surplus
+                                bank_surplus[bank_surp] -= bank_deficit[bank]
+                                # Remove deficit bank from deficit dict
+                                bank_deficit.pop(bank)
+                                # Break from inner loop of surplus banks to outer loop of deficit banks
+                                break
+                            elif res_def >= 0: # Check is deficit is larger than surplus
+                                # Create interbank loan the size of entire surplus
+                                interbank_loan_tranx = {"type_": "interbank_loan", "bank_from": bank, "bank_to" : bank_surp, "amount" : bank_surplus[bank_surp], "time" : time}
+                                environment.get_agent_by_id(bank_surp).issue_interbank_loan(environment, interbank_loan_tranx, time)
+                                # Reduce bank deficit
+                                bank_deficit[bank] -= bank_surplus[bank_surp]
+                                # Remove surplus bank from deficit dict
+                                del bank_surplus[bank_surp]
+
+            # If banks remain with deficits then create CB loans for remaining deficits
+            if len(bank_deficit) > 0:
+                if sum(bank_deficit.values()) > 0:
+                    for bank, value in dict(bank_deficit).items():
+                        cb_loan_tranx = {"type_": "laons_central_bank", "bank_from": bank, "bank_to" : "central_bank", "amount" : bank_deficit[bank], "time" : time}
+                        environment.get_agent_by_id("central_bank").issue_central_bank_loan(environment, cb_loan_tranx, time)
+                        del bank_deficit[bank]
+
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

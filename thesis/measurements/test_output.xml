@@ -11,4 +11,13 @@
     <parameter type='output' column='9' header='Total Deposits' value='total_deposits' ></parameter>
     <parameter type='output' column='10' header='Total Loans' value='loans' ></parameter>
     <parameter type='output' column='11' header='Total Receivables' value='receivables' ></parameter>
+    <parameter type='output' column='12' header='Bank 0 Reserves' value='bank_0_reserves' ></parameter>
+    <parameter type='output' column='13' header='Bank 1 Reserves' value='bank_1_reserves' ></parameter>
+    <parameter type='output' column='14' header='Bank 2 Reserves' value='bank_2_reserves' ></parameter>
+    <parameter type='output' column='15' header='Bank 3 Reserves' value='bank_3_reserves' ></parameter>
+    <parameter type='output' column='16' header='Bank 0 Interbank Loans' value='bank_0_interbank_loans' ></parameter>
+    <parameter type='output' column='17' header='Bank 1 Interbank Loans' value='bank_1_interbank_loans' ></parameter>
+    <parameter type='output' column='18' header='Bank 2 Interbank Loans' value='bank_2_interbank_loans' ></parameter>
+    <parameter type='output' column='19' header='Bank 3 Interbank Loans' value='bank_3_interbank_loans' ></parameter>
+    <parameter type='output' column='20' header='Central Bank Loans' value='cb_loans' ></parameter>
 </measurement>

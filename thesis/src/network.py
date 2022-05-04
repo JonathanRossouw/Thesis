@@ -201,6 +201,27 @@ class Network(object):
 				agent_count.append(len(agents)) 
 	#-------------------------------------------------------------------------
 
+
+	#-------------------------------------------------------------------------
+	# initialize_interbank_network
+	#-------------------------------------------------------------------------    
+	def initialize_interbank_network(self,  environment):
+		# Create networkx graph instance
+		self.interbank_network = nx.Graph()
+		# Determine number of households
+		n = len(environment.banks)
+		# Create random graph with number of nodes equal to number of households.
+		# Parameter determining randomness of graph treated as exogenous for now
+		self.interbank_network = nx.gnp_random_graph(n, 1,  directed=False)
+
+		# Iterate through nodes in graph and assign households to each node.
+		# Relabel node id's to household identifier and id to house
+		for iden, bank in enumerate(environment.banks):
+			self.interbank_network.add_node(iden, id = "bank")
+			mapping = {iden: bank.identifier}
+			nx.relabel_nodes(self.interbank_network, mapping, copy = False)
+	#-------------------------------------------------------------------------
+
 #
 # HELPER ROUTINES
 #

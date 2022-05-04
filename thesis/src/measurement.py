@@ -188,33 +188,18 @@ class Measurement(BaseMeasurement):
             else:
                 return self.environment.deposits_period[-1] - self.environment.deposits_period[-2]
 
-        if ident == "bank_0":
+        banks = []
+        for bank in self.environment.banks:
+            banks.append(bank.identifier)
+
+        if ident in banks:
             deposits = 0
-            bank_acc = self.environment.get_agent_by_id("bank_0").bank_accounts
+            bank_acc = self.environment.get_agent_by_id(ident).bank_accounts
             for acc in bank_acc:
-                deposits += bank_acc[acc]["deposits"]
+                if "bank" not in acc:
+                    deposits += bank_acc[acc]["deposits"]
             return deposits
 
-        if ident == "bank_1":
-            deposits = 0
-            bank_acc = self.environment.get_agent_by_id("bank_1").bank_accounts
-            for acc in bank_acc:
-                deposits += bank_acc[acc]["deposits"]
-            return deposits
-
-        if ident == "bank_2":
-            deposits = 0
-            bank_acc = self.environment.get_agent_by_id("bank_2").bank_accounts
-            for acc in bank_acc:
-                deposits += bank_acc[acc]["deposits"]
-            return deposits
-
-        if ident == "bank_3":
-            deposits = 0
-            bank_acc = self.environment.get_agent_by_id("bank_3").bank_accounts
-            for acc in bank_acc:
-                deposits += bank_acc[acc]["deposits"]
-            return deposits
 
         if ident == "total_deposits":
             total_deposits = 0
@@ -237,4 +222,20 @@ class Measurement(BaseMeasurement):
         if ident == "cbdc_payments":
             return cbdc_balance
 
+        banks_reserves = {}
+        for bank in self.environment.banks:
+            banks_reserves[bank.identifier + "_reserves"] = bank.get_account("reserves")
+
+        if ident in banks_reserves:
+            return banks_reserves[ident]
+
+        banks_interbank_loans = {}
+        for bank in self.environment.banks:
+            banks_interbank_loans[bank.identifier + "_interbank_loans"] = bank.balance_sheet()[bank.identifier]["assets"]["interbank_loans"]
+
+        if ident in banks_interbank_loans:
+            return banks_interbank_loans[ident]
+
+        if ident == "cb_loans":
+            return self.environment.central_bank[0].balance_sheet()["central_bank"]["assets"]["loans_central_bank"]
     # -------------------------------------------------------------------------

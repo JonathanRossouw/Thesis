@@ -210,7 +210,6 @@ class Household(BaseAgent):
         # Allocate Endowment and create bank balance
         endowment_tranx = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : self.identifier, "bank_to" : bank_acc, "amount" : liquid_deposits, "time" : time}
         environment.get_agent_by_id(bank_acc).bank_notes_to_deposits(environment, endowment_tranx, time)
-        print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
