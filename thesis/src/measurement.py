@@ -236,6 +236,54 @@ class Measurement(BaseMeasurement):
         if ident in banks_interbank_loans:
             return banks_interbank_loans[ident]
 
-        if ident == "cb_loans":
-            return self.environment.central_bank[0].balance_sheet()["central_bank"]["assets"]["loans_central_bank"]
+        if ident == "open_market_operations":
+            return self.environment.central_bank[0].get_account("open_market_operations")
+
+        if ident == "interbank_loans":
+            bank = self.environment.banks[0]
+            return bank.balance_sheet()[bank.identifier]["assets"]["interbank_loans"]
+
+        if ident == "loans":
+            bank = self.environment.banks[0]
+            return bank.balance_sheet()[bank.identifier]["assets"]["loans"]
+
+        if ident == "reserves":
+            bank = self.environment.banks[0]
+            return bank.balance_sheet()[bank.identifier]["assets"]["reserves"]
+
+        if ident == "bank_notes":
+            bank = self.environment.banks[0]
+            return bank.balance_sheet()[bank.identifier]["assets"]["bank_notes"]
+
+        if ident == "open_market_operations_0":
+            bank = self.environment.banks[0]
+            return bank.balance_sheet()[bank.identifier]["assets"]["open_market_operations"]
+
+        if ident == "ach_payee_bank_0":
+            bank = self.environment.banks[0]
+            return bank.balance_sheet()[bank.identifier]["assets"]["ach_payee_bank_0"]
+
+        if ident == "deposits":
+            bank = self.environment.banks[0]
+            return bank.balance_sheet()[bank.identifier]["liabilities"]["deposits"]
+
+        if ident == "receivables_0":
+            bank = self.environment.banks[0]
+            return bank.balance_sheet()[bank.identifier]["liabilities"]["receivables"]
+
+        if ident == "loans_central_bank_0":
+            bank = self.environment.banks[0]
+            return bank.balance_sheet()[bank.identifier]["liabilities"]["loans_central_bank"]
+
+        if ident == "ach_payer_bank_0":
+            bank = self.environment.banks[0]
+            return bank.balance_sheet()[bank.identifier]["liabilities"]["ach_payer_bank_0"]
+
+        if ident == "loans_interbank_bank_0":
+            bank = self.environment.banks[0]
+            return bank.balance_sheet()[bank.identifier]["liabilities"]["loans_interbank_bank_0"]
+
+        if ident == "equity_0":
+            bank = self.environment.banks[0]
+            return bank.balance_sheet()[bank.identifier]["liabilities"]["equity"]    
     # -------------------------------------------------------------------------

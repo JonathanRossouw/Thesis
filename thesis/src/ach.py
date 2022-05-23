@@ -174,7 +174,7 @@ class ACH(BaseAgent):
 
         environment.new_transaction(type_="receivables", asset='', from_= tranx["bank_to"], to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         environment.get_agent_by_id(tranx["bank_to"]).bank_accounts[tranx["to"]]["receivables"] += tranx["amount"]
-        print(f"{tranx['amount']} paid from {tranx['from_']} to {tranx['to']} via ach and {tranx['bank_from']} and {tranx['bank_to']}")
+        #print(f"{tranx['amount']} paid from {tranx['from_']} to {tranx['to']} via ach and {tranx['bank_from']} and {tranx['bank_to']}")
     # -------------------------------------------------------------------------
 
 
@@ -187,6 +187,7 @@ class ACH(BaseAgent):
         payer = {}
         payee = {}
         for bank in self.banks:
+            #print(environment.get_agent_by_id(bank).balance_sheet())
             balance = self.get_account("ach_payer_" + bank) - self.get_account("ach_payee_" + bank)
             if balance > 0:
                 payer[bank] = balance

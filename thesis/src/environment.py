@@ -52,6 +52,7 @@ class Environment(BaseConfig):
     deposits_period = []
     total_output = 0 # Measurement of total output
     cbdc_transactions = []
+    number_of_deposits = 0
 
     # Frequency of batching
     batch = 0

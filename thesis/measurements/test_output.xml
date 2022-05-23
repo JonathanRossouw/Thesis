@@ -19,5 +19,17 @@
     <parameter type='output' column='17' header='Bank 1 Interbank Loans' value='bank_1_interbank_loans' ></parameter>
     <parameter type='output' column='18' header='Bank 2 Interbank Loans' value='bank_2_interbank_loans' ></parameter>
     <parameter type='output' column='19' header='Bank 3 Interbank Loans' value='bank_3_interbank_loans' ></parameter>
-    <parameter type='output' column='20' header='Central Bank Loans' value='cb_loans' ></parameter>
+    <parameter type='output' column='20' header='Open Market Operations' value='open_market_operations' ></parameter>
+    <parameter type='output' column='21' header='interbank_loans' value='interbank_loans' ></parameter>
+    <parameter type='output' column='22' header='loans' value='loans' ></parameter>
+    <parameter type='output' column='23' header='reserves' value='reserves' ></parameter>
+    <parameter type='output' column='24' header='bank_notes' value='bank_notes' ></parameter>
+    <parameter type='output' column='25' header='open_market_operations_0' value='open_market_operations_0' ></parameter>
+    <parameter type='output' column='26' header='ach_payee_bank_0' value='ach_payee_bank_0' ></parameter>
+    <parameter type='output' column='27' header='deposits' value='deposits' ></parameter>
+    <parameter type='output' column='28' header='receivables_0' value='receivables_0' ></parameter>
+    <parameter type='output' column='29' header='loans_central_bank_0' value='loans_central_bank_0' ></parameter>
+    <parameter type='output' column='30' header='ach_payer_bank_0' value='ach_payer_bank_0' ></parameter>
+    <parameter type='output' column='31' header='loans_interbank_bank_0' value='loans_interbank_bank_0' ></parameter>
+    <parameter type='output' column='32' header='equity_0' value='equity_0' ></parameter>
 </measurement>

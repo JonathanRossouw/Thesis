@@ -218,6 +218,7 @@ class Household(BaseAgent):
     # -------------------------------------------------------------------------
     def deposits_payment(self, environment, tranx, time):
         deposits_remain = self.get_account("deposits")
+        environment.number_of_deposits += 1
         # If transaction amount is greater than remaining deposits, household takes
         # out new loan for residual amount
         if tranx["amount"] > deposits_remain:
@@ -255,9 +256,8 @@ class Household(BaseAgent):
     # loan_repay
     # household repays loans
     # -------------------------------------------------------------------------
-    def loan_repay(self, environment, time):
+    def loan_repay(self, environment, loan_amount, time):
         bank_acc = list(environment.bank_network.adj[self.identifier])[0]
-        loan_amount = self.get_account("loans")
         loan_tranx = {"type_": "loans", "from_" : self.identifier, "bank_from": bank_acc, "to" : self.identifier, "bank_to" : bank_acc, "amount" : loan_amount, "time" : time}
         environment.get_agent_by_id(bank_acc).repay_loan(environment, loan_tranx)
     # -------------------------------------------------------------------------

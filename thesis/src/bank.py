@@ -115,7 +115,7 @@ class Bank(BaseAgent):
         self.parameters["interest_rate_deposits"] = 0.0  # interest rate on deposits
         self.parameters["active"] = 0  # this is a control parameter checking whether bank is active
         self.parameters["bank"] = 0  # this is a control parameter checking whether bank is active
-        self.assets = ["loans", "reserves", "bank_notes"]
+        self.assets = ["loans", "reserves", "bank_notes", "open_market_operations"]
         self.liabilities = ["deposits", "receivables", "loans_central_bank"] #self.liabilities = ["capital_bank", "deposits", "open_market_operations", "ach_deposits"]
         self.bank_accounts = {}
     # -------------------------------------------------------------------------
@@ -206,7 +206,7 @@ class Bank(BaseAgent):
         # Increase deposit for agent at bank
         environment.new_transaction(type_="deposits", asset='', from_= loan_tranx["bank_from"], to = loan_tranx["from_"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         self.bank_accounts[loan_tranx["from_"]]["deposits"] += loan_tranx["amount"]
-        print(f"\n {loan_tranx['from_']} took out new loan of {loan_tranx['amount']} at {loan_tranx['bank_from']}")
+        #print(f"\n {loan_tranx['from_']} took out new loan of {loan_tranx['amount']} at {loan_tranx['bank_from']}")
         #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
@@ -220,7 +220,7 @@ class Bank(BaseAgent):
         # Open deposit account for household at bank
         environment.new_transaction(type_="deposits", asset='', from_= loan_tranx["from_"], to = loan_tranx["bank_from"], amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
         self.bank_accounts[loan_tranx["from_"]]["loans"] -= loan_tranx["amount"]
-        print(f"\n {loan_tranx['from_']} repaid loan of {loan_tranx['amount']} at {loan_tranx['bank_from']}")
+        #print(f"\n {loan_tranx['from_']} repaid loan of {loan_tranx['amount']} at {loan_tranx['bank_from']}")
         #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
@@ -233,55 +233,75 @@ class Bank(BaseAgent):
         # Create loan agreement with bank
         type_ = "loans_interbank_" + loan_tranx["bank_from"]
         environment.new_transaction(type_= type_, asset='', from_= loan_tranx["bank_from"], to = self.identifier, amount = loan_tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        if loan_tranx["bank_from"] in loan_tranx:
+        if loan_tranx["bank_from"] in self.bank_accounts:
             self.bank_accounts[loan_tranx["bank_from"]][type_] += loan_tranx["amount"]
         elif loan_tranx["bank_from"] not in loan_tranx:
             self.bank_accounts[loan_tranx["bank_from"]] = {type_: loan_tranx["amount"]}
         # Transfer reserves
         reserves_tranx = {"type_": "reserves", "amount" : loan_tranx["amount"], "bank_from":self.identifier, "bank_to":loan_tranx["bank_from"], "time" : time}
         environment.get_agent_by_id("central_bank").rgts_payment(environment, reserves_tranx, time)    
-        print(f"\n {loan_tranx['bank_from']} took out new loan of {loan_tranx['amount']} at {self.identifier}")
+        #print(f"\n {loan_tranx['bank_from']} took out new loan of {loan_tranx['amount']} at {self.identifier}")
         #print(self.balance_sheet())
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # settle_interbank_loan
+    # bank settles loan with another bank
+    # -------------------------------------------------------------------------
+    def settle_interbank_loan(self, environment, time):
+        # Repay loans agreement with bank
+        # Loop through bank accounts
+        for acc, values in dict(self.bank_accounts).items():
+            if "bank" in acc: #If bank has account of other bank then it is owed an interbank loan from that bank
+                type_ = list(self.bank_accounts[acc].keys())[0] # Create correct type
+                amount = list(self.bank_accounts[acc].values())[0] # Record amount
+                # Reserve loan transaction
+                environment.new_transaction(type_= type_, asset='', from_= self.identifier, to = acc, amount = amount, interest=0.00, maturity=0, time_of_default=-1)
+                del self.bank_accounts[acc] # Remove loan account from bank balance sheet
+                # Repay loan with RTGS
+                reserves_tranx = {"type_": "reserves", "amount" : amount, "bank_from":acc, "bank_to":self.identifier, "time" : time}
+                environment.get_agent_by_id("central_bank").rgts_payment(environment, reserves_tranx, time)    
+                #print(f"\n {acc} repaid loan of {amount} to {self.identifier}")
     # -------------------------------------------------------------------------
     
 
 
-    # -------------------------------------------------------------------------
-    # bank_asset_allocation
-    # bank determines reserves from number of households and loan amounts
-    # calls Central Bank method to initialize reserves and Open Market 
-    # Transactions to balance assets and liabilities
-    # -------------------------------------------------------------------------
-    def bank_allocate_reserves(self, environment):
-        # Create reserves
-        reserves_required = 0.2 * self.get_account("deposits")
-        reserves_allocation = {"type_": "reserves", "from_": "central_bank", "to": self.identifier, "amount": reserves_required}
-        environment.get_agent_by_id("central_bank").new_reserves(environment, reserves_allocation)
-        print(f"\n{self.identifier} has {reserves_required} reserves, and {reserves_required} Open Market Operations")
-        #print(self.balance_sheet())
-    # -------------------------------------------------------------------------
+    # # -------------------------------------------------------------------------
+    # # bank_asset_allocation
+    # # bank determines reserves from number of households and loan amounts
+    # # calls Central Bank method to initialize reserves and Open Market 
+    # # Transactions to balance assets and liabilities
+    # # -------------------------------------------------------------------------
+    # def bank_allocate_reserves(self, environment):
+    #     # Create reserves
+    #     reserves_required = 0.2 * self.get_account("deposits")
+    #     reserves_allocation = {"type_": "reserves", "from_": "central_bank", "to": self.identifier, "amount": reserves_required}
+    #     environment.get_agent_by_id("central_bank").new_reserves(environment, reserves_allocation)
+    #     print(f"\n{self.identifier} has {reserves_required} reserves, and {reserves_required} Open Market Operations")
+    #     #print(self.balance_sheet())
+    # # -------------------------------------------------------------------------
 
-    # -------------------------------------------------------------------------
-    # ach_deposits_collateral
-    # Create deposits at ACH and provide collateral
-    # -------------------------------------------------------------------------
-    def ach_deposits_collateral(self, environment, time):
-        # Create deposits equal to the maximimum amount of deposits expected to be paid
-        # during single batching period. Collateral is equal to deposits. Negative deposits
-        # is not allowed.
-        ach_deposit_amount = self.get_account("deposits")
-        ach_deposit = {"type_": "ach_deposits", "from_": "ach", "to": self.identifier, "amount": ach_deposit_amount}
-        environment.new_transaction(type_=ach_deposit["type_"], asset='', from_= ach_deposit["from_"], to = ach_deposit["to"], amount = ach_deposit["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        # New collateral with loans
-        ach_collateral_amount = ach_deposit_amount
-        ach_collateral = {"type_": "loans", "from_": self.identifier, "to": "ach", "amount": ach_collateral_amount}
-        environment.new_transaction(type_=ach_collateral["type_"], asset='', from_= ach_collateral["from_"], to = ach_collateral["to"], amount = ach_collateral["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        environment.get_agent_by_id("ach").collateral[self.identifier] = ach_collateral_amount
-        # Ensure sufficient reserves
-        new_reserves = ach_deposit_amount - self.get_account("reserves")
-        if new_reserves > 0:
-            reserve_tranx = {"type_": "reserves", "from_": "central_bank", "to": self.identifier, "amount": new_reserves}
-            environment.get_agent_by_id("central_bank").new_reserves(environment, reserve_tranx)
+    # # -------------------------------------------------------------------------
+    # # ach_deposits_collateral
+    # # Create deposits at ACH and provide collateral
+    # # -------------------------------------------------------------------------
+    # def ach_deposits_collateral(self, environment, time):
+    #     # Create deposits equal to the maximimum amount of deposits expected to be paid
+    #     # during single batching period. Collateral is equal to deposits. Negative deposits
+    #     # is not allowed.
+    #     ach_deposit_amount = self.get_account("deposits")
+    #     ach_deposit = {"type_": "ach_deposits", "from_": "ach", "to": self.identifier, "amount": ach_deposit_amount}
+    #     environment.new_transaction(type_=ach_deposit["type_"], asset='', from_= ach_deposit["from_"], to = ach_deposit["to"], amount = ach_deposit["amount"], interest=0.00, maturity=0, time_of_default=-1)
+    #     # New collateral with loans
+    #     ach_collateral_amount = ach_deposit_amount
+    #     ach_collateral = {"type_": "loans", "from_": self.identifier, "to": "ach", "amount": ach_collateral_amount}
+    #     environment.new_transaction(type_=ach_collateral["type_"], asset='', from_= ach_collateral["from_"], to = ach_collateral["to"], amount = ach_collateral["amount"], interest=0.00, maturity=0, time_of_default=-1)
+    #     environment.get_agent_by_id("ach").collateral[self.identifier] = ach_collateral_amount
+    #     # Ensure sufficient reserves
+    #     new_reserves = ach_deposit_amount - self.get_account("reserves")
+    #     if new_reserves > 0:
+    #         reserve_tranx = {"type_": "reserves", "from_": "central_bank", "to": self.identifier, "amount": new_reserves}
+    #         environment.get_agent_by_id("central_bank").new_reserves(environment, reserve_tranx)
     # -------------------------------------------------------------------------
 
 
@@ -291,14 +311,14 @@ class Bank(BaseAgent):
     # -------------------------------------------------------------------------
     def make_payment(self, environment, tranx, time):
 		# We print the action of transferring deposits
-        print(f"\n{tranx['from_']}s paid {tranx['amount']} to {tranx['bank_from']} for {tranx['to']} at time {tranx['time']}.")
+        #print(f"\n{tranx['from_']}s paid {tranx['amount']} to {tranx['bank_from']} for {tranx['to']} at time {tranx['time']}.")
         # If payment is within bank, immediately debit and credit accounts
         if (tranx["bank_from"] == tranx["bank_to"]):
             # Transfer receipt from bank to household
             environment.new_transaction(type_="deposits", asset='', from_= tranx["from_"], to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
             self.bank_accounts[tranx["from_"]]["deposits"] -= tranx["amount"]
             self.bank_accounts[tranx["to"]]["deposits"] += tranx["amount"]
-            print(f"\n {self.identifier} paid {tranx['amount']} to {tranx['to']} \n")
+            #print(f"\n {self.identifier} paid {tranx['amount']} to {tranx['to']} \n")
 
 
         # It payment is between banks, send transaction to ACH
@@ -308,7 +328,7 @@ class Bank(BaseAgent):
             self.bank_accounts[tranx["from_"]]["deposits"] -= tranx["amount"]
             # The transaction is sent to the ACH for batching
             environment.get_agent_by_id("ach").make_ach_payment(environment, tranx, time)
-            print(f"\n {self.identifier} paid {tranx['amount']} to {tranx['to']} \n")
+            #print(f"\n {self.identifier} paid {tranx['amount']} to {tranx['to']} \n")
         environment.total_payments += tranx["amount"]
         environment.total_deposit_payments += tranx["amount"]
         #logging.info("  payments made on step: %s",  time)
@@ -320,12 +340,12 @@ class Bank(BaseAgent):
     # -------------------------------------------------------------------------
     def make_ach_payment(self, environment, tranx, time):
 		# We print the action of transferring deposits to batch
-        print(f"\n{tranx['from_']}s paid {tranx['amount']} to {tranx['bank_from']} for {tranx['to']} at time {tranx['time']}.")
+        #print(f"\n{tranx['from_']}s paid {tranx['amount']} to {tranx['bank_from']} for {tranx['to']} at time {tranx['time']}.")
         # If payment is within bank, immediately debit and credit accounts
         if (tranx["bank_from"] == tranx["bank_to"]):
             # Transfer receipt from bank to household
             environment.new_transaction(type_="deposits", asset='', from_= tranx["from_"], to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-            print(f"\n {self.identifier} paid {tranx['amount']} to {tranx['to']} \n")
+            #print(f"\n {self.identifier} paid {tranx['amount']} to {tranx['to']} \n")
         # It payment is between banks, send transaction to ACH
         elif (tranx["bank_from"] != tranx["bank_to"]):
             # Household or firm paying credits their deposit account and their bank debits their deposit account
@@ -360,8 +380,22 @@ class Bank(BaseAgent):
                     self.bank_accounts[item]["receivables"] -= receivables
                     
             # Take in transaction details and transfer amount to deposits of household
-                    print(f"{self.identifier} settled payment of {receivables} to {item} at time {time}.")
+                    #print(f"{self.identifier} settled payment of {receivables} to {item} at time {time}.")
         #print(self.balance_sheet())
+    # -------------------------------------------------------------------------
+
+
+    # -------------------------------------------------------------------------
+    # check_required_reserves
+    # bank determines whether reserve requirements are met and whether excess
+    # or deficit of reserves
+    # -------------------------------------------------------------------------
+    def check_required_reserves(self):
+        from numpy import floor
+        # Determine reserves required
+        required_reserves = floor(self.get_account("deposits") * 0.1) # reserves requirements rule
+        reserves_residual = self.get_account("reserves") - required_reserves
+        return reserves_residual
     # -------------------------------------------------------------------------
 
 
