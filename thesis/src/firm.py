@@ -45,6 +45,7 @@ class Firm(BaseAgent):
     liabilities = []
     sales = 0.0
     wages = 0.0
+    capital = 0
 
     #
     #
@@ -117,6 +118,7 @@ class Firm(BaseAgent):
         self.supply = 0
         self.sales = 0
         self.equity_households = {}
+        self.capital = 0
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -207,6 +209,24 @@ class Firm(BaseAgent):
         #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
+
+
+    # -------------------------------------------------------------------------
+    # loan_capital
+    # take out long term long to purchase capital
+    # -------------------------------------------------------------------------
+    def loan_capital(self, environment, time):
+        # Take out loan
+        bank_acc = list(environment.bank_network.adj[self.identifier])[0]
+        loan_amount = self.get_equity()
+        loan_tranx = {"type_": "loans", "from_" : self.identifier, "bank_from": bank_acc, "to" : bank_acc, "amount" : loan_amount, "time" : time}
+        environment.get_agent_by_id(bank_acc).new_loans_firm_capital(environment, loan_tranx, time)
+        # Purchase capital
+        self.capital += loan_amount
+        print(f"{self.identifier} took out loan of {loan_amount} for capital")
+    # -------------------------------------------------------------------------
+
+
     # -------------------------------------------------------------------------
     # get_households
     # create list of household identifiers for households that work at firm
@@ -239,7 +259,14 @@ class Firm(BaseAgent):
         gamma = 1
         beta = 1    
         # Produce Output
-        self.supply = 1/8 * (labour ** beta) * (capital ** gamma) # Production function
+        import numpy
+
+        #technology_shock = numpy.random.binomial(1, 0.2) * numpy.random.uniform(0.1, 0.5) 
+        technology_shock = 0
+        if technology_shock > 0:
+            self.supply = technology_shock * (labour ** beta) * (capital ** gamma) # Production function
+        else: 
+            self.supply =  (labour ** beta) * (capital ** gamma) # Production function
         environment.total_output += self.supply
         #print(f"\n{self.identifier} produced {self.supply} units of output using {capital} units of capital and {labour} units of labour at time {time}.")
     # -------------------------------------------------------------------------
@@ -276,7 +303,7 @@ class Firm(BaseAgent):
                 # Pay for Wages with deposits
                 deposit_tranx = {"type_": "deposits", "from_" : self.identifier, "bank_from": bank_acc, "to" : house.identifier, "bank_to" : house_bank_acc, "amount" : wage, "time" : time}
                 environment.get_agent_by_id(bank_acc).make_payment(environment, deposit_tranx, time)
-            print(f"\n {wage} unit wage paid with {house.identifier} for labour")
+            #print(f"\n {wage} unit wage paid with {house.identifier} for labour")
             #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
@@ -316,7 +343,7 @@ class Firm(BaseAgent):
     # -------------------------------------------------------------------------
     def balance_sheet(self):
         balance_sheet = {}
-        assets = {}
+        assets = {"capital":self.capital}
         liabilities = {}
         for item in self.assets:
             assets[item] = round(self.get_account(item), 5)
@@ -341,7 +368,7 @@ class Firm(BaseAgent):
     # calculates equity
     # -------------------------------------------------------------------------
     def get_equity(self):
-        assets = {}
+        assets = {"capital":self.capital}
         liabilities = {}
         for item in self.assets:
             assets[item] = round(self.get_account(item), 7)

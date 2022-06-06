@@ -78,6 +78,18 @@ class Environment(BaseConfig):
 
     static_parameters["batch"] = 0 # Frequency of batching
 
+    # Interest Rates
+
+    static_parameters["reserves_interest"] = 0 
+    static_parameters["central_bank_loans_interest"] = 0 
+    static_parameters["open_market_operations_interest"] = 0 
+    static_parameters["loans_interbank_interest"] = 0 
+    static_parameters["loans_interest"] = 0 
+    static_parameters["deposits_interest"] = 0 
+    static_parameters["clearing_house_fee"] = 0 
+
+
+
     static_parameters["bank_directory"] = ""  # directory containing bank config files
     static_parameters["firm_directory"] = ""  # directory containing firm config files
     static_parameters["household_directory"] = ""  # directory containing household config files
@@ -268,6 +280,13 @@ class Environment(BaseConfig):
         self.static_parameters["household_directory"] = ""
         self.static_parameters["ach_directory"] = ""
         self.static_parameters["batch"] = 0
+        self.static_parameters["reserves_interest"] = 0 
+        self.static_parameters["central_bank_loans_interest"] = 0 
+        self.static_parameters["open_market_operations_interest"] = 0 
+        self.static_parameters["loans_interbank_interest"] = 0 
+        self.static_parameters["loans_interest"] = 0 
+        self.static_parameters["deposits_interest"] = 0 
+        self.static_parameters["clearing_house_fee"] = 0 
         self.variable_parameters = {}
         self.network = nx.DiGraph()
 

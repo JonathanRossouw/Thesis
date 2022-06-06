@@ -113,7 +113,7 @@ class Household(BaseAgent):
         #self.parameters["active"] = 0  # this is a control parameter checking whether bank is active
         # The below is not needed, but kept just in case it will become needed
         # self.state_variables["sweep_labour"] = 0.0  # labour left in the simulation step
-        self.assets = ["deposits", "cbdc", "bank_notes", "receivables"] #self.assets = ["equity_firm", "equity_bank", "deposits", "cbdc", "bank_notes"]
+        self.assets = ["deposits", "bank_notes", "receivables"] #self.assets = ["equity_firm", "equity_bank", "deposits", "cbdc", "bank_notes"]
         self.liabilities = ["loans"]
         self.equity_firm = 0.0
         self.equity_bank = 0.0
@@ -178,9 +178,10 @@ class Household(BaseAgent):
 
     # -------------------------------------------------------------------------
     # hh_asset_endowment
-    # household creates deposits at bank equal to endowed wealth. Household then
-    # determines level of liquid deposits for the month, the remained of wealth 
-    # is evenly split between firm and bank capital
+    # Household is endowed bank notes from central bank equal to wealth.
+    # Household creates deposits using bank notes at bank equal to endowed wealth. 
+    # Household then determines level of liquid deposits for the month, the remainder of deposits
+    # is evenly split between firm and bank capital which
     # -------------------------------------------------------------------------
     def hh_asset_endowment(self, environment, time):
         import random

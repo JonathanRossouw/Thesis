@@ -86,6 +86,8 @@ class Updater(BaseModel):
     def do_update(self,  environment,  time):
         # If time is 0, endow agents with endowments
         self.endow_agents(environment, time)
+        # Accrue Interests
+        #self.accrue_interests(environment, time)
         # Every batch*2 + 1 periods settle central bank then interbank loans
         self.settle_central_bank_loans(environment, time)
         self.settle_interbank_loans(environment, time)
@@ -102,10 +104,10 @@ class Updater(BaseModel):
         self.net_settle(environment, time)
         # CBDC transactions settle
         #self.write_cbdc_transactions(environment, time)
-        # Purging accounts at every step just in case
-        self.update_equity(environment, time)
         # Loop through banks to determine which have excess reserves and deficit reserves
         self.check_reserve_requirements(environment, time)
+        # Purging accounts at every step just in case
+        self.update_equity(environment, time)
         print(f"Period {time} complete")
         transaction = Transaction()
         transaction.purge_accounts(environment)
@@ -123,6 +125,7 @@ class Updater(BaseModel):
             self.firm_endow_assets(environment, time)
             self.bank_initialize_reserves(environment, time)
             self.ach_initialize(environment, time)
+            self.firm_capital_initialize(environment, time)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -183,12 +186,19 @@ class Updater(BaseModel):
     # -------------------------------------------------------------------------
     def update_equity(self,  environment, time):
         # Call allocation method in Firms class
-        if time%8 == 0:
+        if time > 0 and time%(environment.batch*2) == 0:
             E = environment.employment_network
             for firm in environment.firms:
                 for hh in E.adj[firm.identifier]:
                     equity_prop = firm.equity_households[hh]
                     environment.get_agent_by_id(hh).equity_firm = round(firm.get_equity() * equity_prop, 3)
+
+            G = environment.bank_network
+            for bank in environment.banks:
+                for agent in G.adj[bank.identifier]:
+                    if "household" in agent:
+                        equity_prop = bank.equity_households[agent]
+                        environment.get_agent_by_id(agent).equity_bank = round(bank.get_equity() * equity_prop, 3)
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -204,25 +214,34 @@ class Updater(BaseModel):
                 environment.get_agent_by_id("ach").banks.append(bank.identifier)
     # -------------------------------------------------------------------------
 
+
     # -------------------------------------------------------------------------
-    # ach_initialize_batches
-    # This function makes sure that all households have the appropriate
-    # deposit endowment for every step, in line with the parameters
+    # firm_capital_initialize
+    # This function makes all firms take out loans for capital expenditure
+    # from the bank they are connected to
     # -------------------------------------------------------------------------
-    def ach_initialize_batches(self,  environment, time):
-        # Call endowment method in Households and Banks class
+    def firm_capital_initialize(self,  environment, time):
         if time == 0:
-            # Loop through banks to create batches
-            for bank in environment.banks:
-                environment.get_agent_by_id("ach").batches[bank.identifier] = []
-                environment.get_agent_by_id("ach").collateral[bank.identifier] = 0
-        elif time > 0:
-            if time%environment.batch == 1:
-                # Loop through banks to create ach deposits and provide collateral
-                # Ensure reserves are sufficient
-                for bank in environment.banks:
-                    bank.ach_deposits_collateral(environment, time)
-    # -------------------------------------------------------------------------  
+            # Loop through firms to take out loans
+            for firm in environment.firms:
+                firm.loan_capital(environment, time)
+    # -------------------------------------------------------------------------
+    
+
+    # -------------------------------------------------------------------------
+    # accrue_interests(environment, time)
+    # This method accrues interest on all transaction
+    # making sure we don't double count the transactions that are
+    # on the books of multiple agents, interest is specified within the
+    # transaction itself
+    # -------------------------------------------------------------------------
+    def accrue_interests(self,  environment, time):
+        if time > 0 and time%(environment.batch*2 + 1) == 0:
+            environment.accrue_interests()
+            print("Interest Accrued")
+        #logging.info("  interest accrued on step: %s",  time)
+        # Keep on the log with the number of step, for debugging mostly
+    # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
     # production(environment, time)
@@ -253,48 +272,16 @@ class Updater(BaseModel):
 
             # Wages on the 25th of the month
             # if (int(day) % 25) == 0:
-            if time%(25*8) == 0:
+            if time%(4*environment.batch*2) == 0:
                 E = environment.employment_network
                 # Loop through firms in the network and pay wages
                 for u in E.nodes(data=False):
                     agent = environment.get_agent_by_id(u)
                     if agent in environment.firms:
                         agent.production_wage(environment, time)
-                        print(f"\n PAID WAGES {agent.identifier}!!! \n")
+                        #print(f"\n PAID WAGES {agent.identifier}!!! \n")
                         
     # ------------------------------------------------------------------------- 
-
-    # # -------------------------------------------------------------------------
-    # # firms_repay_loans(self, environment, time)
-    # # Loop through firms and repay loans to banks
-    # # -------------------------------------------------------------------------
-    # def repay_loans(self, environment, time):
-    #     # Set Date Time from time
-    #     # year,julian = [2021,time]
-    #     # date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
-    #     # # Year Month Day
-    #     # year = int(date_time.strftime("%y"))
-    #     # month = int(date_time.strftime("%m"))
-    #     # day = date_time.strftime("%d")
-    #     # # Find last day of month
-    #     # end_day = (datetime.date(year + int(month/12), month%12+1, 1) -datetime.timedelta(days=1)).strftime("%d")
-    #     # # Production on the first of the month
-    #     if time > 0:
-    #     # # Repay loans and contracts expire on the last day of the month
-    #         # if end_day == day:
-    #         if time%30 == 0:
-    #             environment.sweep_cbdc_payments = 0
-    #             G = environment.employment_network
-    #             # Loop through firms in the network and repay loans
-    #             for u in G.nodes(data=False):
-    #                 agent = environment.get_agent_by_id(u)
-    #                 if agent in environment.firms:
-    #                     agent.production_repay_loan(environment, time)
-    #                     print(f"\n REPAY LOANS {agent.identifier}!!! \n")
-    #                 elif agent in environment.households:
-    #                     agent.labour_loan(environment, time)
-    #                     print(f"\n REPAY LOANS {agent.identifier}!!! \n")
-    # # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
     # output_consumption(self, environment, time)
@@ -322,37 +309,39 @@ class Updater(BaseModel):
                     firm = environment.get_agent_by_id(node[0])
                     supply_frac = np.random.uniform(-1, 0.3, len(G.adj[node[0]]))
                     supply_frac[supply_frac<0] = 0
-                    if supply_frac.sum() > 0:
-                        supply_frac = np.round(firm.supply * supply_frac/(supply_frac.sum()), 6)
-                # G = environment.consumption_network #Get consumption network
-                # for node in list(G.nodes(data=True)): # loop through nodes
-                #     if node[1]["id"] == "firm": # for all firms
-                #         firm = environment.get_agent_by_id(node[0])
-                #         supply_frac = []    # create empty list of fractional supply
-                #         supply = range(firm.supply) # create list of units of output
-                #         it = iter(supply)   # create iterable list of units of output
-                #         hh_num = len(G.adj[node[0]]) # determine number of households that are connected to firm in consumption network
-                #         from itertools import islice
-                #         size = len(supply)  # determine number of units of output
-                #         for i in range(hh_num-1,0,-1): # loop through n-1 households 
-                #             s = random.randint(0, hh_num - i) # create min and max amount of consumption
-                #             supply_frac.append(list(islice(it,0,s)))    # determine which units of output ith household consumes and add to supply list
-                #             size -= s   # reduce number of units available
-                #         supply_frac.append(list(it))    # add remaining units to final household
-                #         supply_frac = [len(u) for u in  supply_frac]    # count number of units demanded per household
-                #         print(f"{node[0]}: {supply_frac}")
-                #         # Loop through households and number of units allocated and create deposit transaction
-                #       for house, k in zip(list(G.adj[node[0]]), supply_frac):
-                        for house, k in zip(list(G.adj[node[0]]), supply_frac):
-                            if k == 0:
-                                pass
-                            elif k > 0:  
-                                hh = environment.get_agent_by_id(house)
-                                hh_bank_acc = list(environment.bank_network.adj[hh.identifier])[0]
-                                firm_bank_acc = list(environment.bank_network.adj[firm.identifier])[0]
-                                consumption_demand = {"type_": "deposit", "from_" : hh.identifier, "to" : firm.identifier, "amount" : k, "bank_from":hh_bank_acc, "bank_to":firm_bank_acc, "time" : time}
-                                hh.deposits_payment(environment, consumption_demand, time)
-                            #print(f"{hh.identifier} purchased {k} units of output from {firm.identifier}")
+                    # If no house has positive demand, then randomly assign total consumption to a single household
+                    if supply_frac.sum() == 0:
+                       supply_frac[np.random.choice(np.array(range(len(supply_frac))), 1)[0]] = 1
+                    supply_frac = np.round(firm.supply * supply_frac/(supply_frac.sum()), 6)
+            # G = environment.consumption_network #Get consumption network
+            # for node in list(G.nodes(data=True)): # loop through nodes
+            #     if node[1]["id"] == "firm": # for all firms
+            #         firm = environment.get_agent_by_id(node[0])
+            #         supply_frac = []    # create empty list of fractional supply
+            #         supply = range(firm.supply) # create list of units of output
+            #         it = iter(supply)   # create iterable list of units of output
+            #         hh_num = len(G.adj[node[0]]) # determine number of households that are connected to firm in consumption network
+            #         from itertools import islice
+            #         size = len(supply)  # determine number of units of output
+            #         for i in range(hh_num-1,0,-1): # loop through n-1 households 
+            #             s = random.randint(0, hh_num - i) # create min and max amount of consumption
+            #             supply_frac.append(list(islice(it,0,s)))    # determine which units of output ith household consumes and add to supply list
+            #             size -= s   # reduce number of units available
+            #         supply_frac.append(list(it))    # add remaining units to final household
+            #         supply_frac = [len(u) for u in  supply_frac]    # count number of units demanded per household
+            #         print(f"{node[0]}: {supply_frac}")
+            #         # Loop through households and number of units allocated and create deposit transaction
+            #       for house, k in zip(list(G.adj[node[0]]), supply_frac):
+                    for house, k in zip(list(G.adj[node[0]]), supply_frac):
+                        if k == 0:
+                            pass
+                        elif k > 0:  
+                            hh = environment.get_agent_by_id(house)
+                            hh_bank_acc = list(environment.bank_network.adj[hh.identifier])[0]
+                            firm_bank_acc = list(environment.bank_network.adj[firm.identifier])[0]
+                            consumption_demand = {"type_": "deposit", "from_" : hh.identifier, "to" : firm.identifier, "amount" : k, "bank_from":hh_bank_acc, "bank_to":firm_bank_acc, "time" : time}
+                            hh.deposits_payment(environment, consumption_demand, time)
+                        #print(f"{hh.identifier} purchased {k} units of output from {firm.identifier}")
                 # Set remaining supply at firm to zero.        
                     firm.supply -= supply_frac.sum()
                     firm.sales += supply_frac.sum()
@@ -380,7 +369,7 @@ class Updater(BaseModel):
     # This function settles all interbank loans at beginning of period
     # -------------------------------------------------------------------------
     def settle_interbank_loans(self, environment, time):
-        if time%(environment.batch*2 + 1) == 0:
+        if time > 0 and time%(environment.batch*2 + 1) == 0:
             for bank in environment.banks:
                 bank.settle_interbank_loan(environment, time)
                 #print(bank.balance_sheet())
@@ -391,7 +380,7 @@ class Updater(BaseModel):
     # This function settles all interbank loans at beginning of period
     # -------------------------------------------------------------------------
     def settle_central_bank_loans(self, environment, time):
-        if time%(environment.batch*2 + 1) == 0:
+        if time > 0 and time%(environment.batch*2 + 1) == 0:
             for bank in environment.banks:
                 central_bank_loans_amount = bank.get_account("loans_central_bank")
                 if central_bank_loans_amount > 0:
@@ -413,11 +402,11 @@ class Updater(BaseModel):
                 loans = house.get_account("loans")
                 if loans > 0 and deposits > 0:
                     if loans > deposits:
-                        print(f"{house.identifier} repaid {deposits} out of {loans} worth of loans")
+                        #print(f"{house.identifier} repaid {deposits} out of {loans} worth of loans")
                         house.loan_repay(environment, deposits, time) #Pay off as much loans as deposits
                         
                     elif loans < deposits:
-                        print(f"{house.identifier} repaid {loans} out of {loans} worth of loans")
+                        #print(f"{house.identifier} repaid {loans} out of {loans} worth of loans")
                         house.loan_repay(environment, loans, time) #Pay off all loans
                         
     # -------------------------------------------------------------------------
@@ -455,14 +444,16 @@ class Updater(BaseModel):
                     bank_deficit[bank.identifier] = (abs(excess_reserves)) # Add bank to deficit dict if applicable
                 elif excess_reserves > 0:
                     bank_surplus[bank.identifier] = (abs(excess_reserves)) # Add bank to surplus dict if applicable
-            #print(f"Bank_Deficit \n {bank_deficit}")
-            #print(f"Bank_Surplus \n {bank_surplus}")
+            print(f"Bank_Deficit \n {bank_deficit}")
+            print(f"Bank_Surplus \n {bank_surplus}")
 
             # Check if overall reserve requirement for banks met
 
-            reserves_required = deposits * 0.1
+            reserves_required = deposits * 0.02
             reserves_total = environment.get_agent_by_id("central_bank").get_account("reserves")
-            reserve_residual = (reserves_total - reserves_required)
+            reserve_residual = round(reserves_total - reserves_required, 6)
+
+            print(f"\n reserve_residual {reserve_residual} \n")
 
             # Loop through banks with surplus and drain surplus
 
@@ -471,27 +462,41 @@ class Updater(BaseModel):
                 #print(f"Overall excess reserves of {reserve_residual}")
                 bank_surplus_keys = list(bank_surplus) # Create random order of banks with surplus for random matching
                 shuffle(bank_surplus_keys)
-                for bank_surp in bank_surplus_keys:
-                    amount = (reserve_residual/len(bank_surplus_keys))
-                    sell_omo_tranx = {"type_": "open_market_operations", "bank_from": "central_bank", "bank_to" : bank_surp, "amount" : amount, "time" : time}
-                    environment.get_agent_by_id("central_bank").sell_open_market_operations(environment, sell_omo_tranx, time)
-                    bank_surplus[bank_surp] -= amount
-                    if bank_surplus[bank_surp] == 0:
-                        del bank_surplus[bank_surp]
+                # Loop through banks with surplus and pay min of excess reserves or entire surplus
+                while round(reserve_residual) > 1 and round(sum(bank_surplus.values()), 3) > 0:
+                    res_paid = 0
+                    for bank_surp in bank_surplus_keys:
+                        amount = min(reserve_residual, bank_surplus[bank_surp])
+                        sell_omo_tranx = {"type_": "open_market_operations", "bank_from": "central_bank", "bank_to" : bank_surp, "amount" : amount, "time" : time}
+                        environment.get_agent_by_id("central_bank").sell_open_market_operations(environment, sell_omo_tranx, time)
+                        bank_surplus[bank_surp] -= amount
+                        res_paid += amount
+                        if bank_surplus[bank_surp] == 0:
+                            bank_surplus_keys.remove(bank_surp)
+                            del bank_surplus[bank_surp]
+                    reserve_residual -= res_paid
+
+
             # Loop through banks with deficit and increase reserves
 
             elif reserve_residual < 0:
-                reserve_residual = (abs(reserve_residual))
+                reserve_residual = abs(reserve_residual)
                 #print(f"Overall deficit reserves of {reserve_residual}")
-                bank_deficit_keys = list(bank_deficit) # Create random order of banks with surplus for random matching
+                bank_deficit_keys = list(bank_deficit) # Create random order of banks with deficit for random matching
                 shuffle(bank_deficit_keys)
-                for bank_def in bank_deficit_keys:
-                    amount = (reserve_residual/len(bank_deficit_keys))
-                    purchase_omo_tranx = {"type_": "open_market_operations", "bank_from": "central_bank", "bank_to" : bank_def, "amount" : amount, "time" : time}
-                    environment.get_agent_by_id("central_bank").purchase_open_market_operations(environment, purchase_omo_tranx, time)
-                    bank_deficit[bank_def] -= amount
-                    if bank_deficit[bank_def] == 0:
-                        del bank_deficit[bank_def]
+                # Loop through banks with deficits and pay min of average deficit reserves or entire deficit
+                while round(reserve_residual) > 1:
+                    res_paid = 0
+                    for bank_def in bank_deficit_keys:
+                        amount = min(reserve_residual, bank_deficit[bank_def])
+                        purchase_omo_tranx = {"type_": "open_market_operations", "bank_from": "central_bank", "bank_to" : bank_def, "amount" : amount, "time" : time}
+                        environment.get_agent_by_id("central_bank").purchase_open_market_operations(environment, purchase_omo_tranx, time)
+                        bank_deficit[bank_def] -= amount
+                        res_paid += amount
+                        if bank_deficit[bank_def] == 0:
+                            bank_deficit_keys.remove(bank_def)
+                            del bank_deficit[bank_def]
+                    reserve_residual -= res_paid
             
             # If any banks have deficit reserves, loop through deficit banks from largest to smallest
             # and create interbank loan from surplus banks that have largest surplus. Starts with largest 
@@ -576,6 +581,58 @@ class Updater(BaseModel):
     #                 json.dump(environment.cbdc_transactions, cbdc)
     #             environment.cbdc_transactions = []
     # -------------------------------------------------------------------------
+
+    # # -------------------------------------------------------------------------
+    # # firms_repay_loans(self, environment, time)
+    # # Loop through firms and repay loans to banks
+    # # -------------------------------------------------------------------------
+    # def repay_loans(self, environment, time):
+    #     # Set Date Time from time
+    #     # year,julian = [2021,time]
+    #     # date_time = datetime.datetime(year, 1, 1)+datetime.timedelta(days=julian -1)
+    #     # # Year Month Day
+    #     # year = int(date_time.strftime("%y"))
+    #     # month = int(date_time.strftime("%m"))
+    #     # day = date_time.strftime("%d")
+    #     # # Find last day of month
+    #     # end_day = (datetime.date(year + int(month/12), month%12+1, 1) -datetime.timedelta(days=1)).strftime("%d")
+    #     # # Production on the first of the month
+    #     if time > 0:
+    #     # # Repay loans and contracts expire on the last day of the month
+    #         # if end_day == day:
+    #         if time%30 == 0:
+    #             environment.sweep_cbdc_payments = 0
+    #             G = environment.employment_network
+    #             # Loop through firms in the network and repay loans
+    #             for u in G.nodes(data=False):
+    #                 agent = environment.get_agent_by_id(u)
+    #                 if agent in environment.firms:
+    #                     agent.production_repay_loan(environment, time)
+    #                     print(f"\n REPAY LOANS {agent.identifier}!!! \n")
+    #                 elif agent in environment.households:
+    #                     agent.labour_loan(environment, time)
+    #                     print(f"\n REPAY LOANS {agent.identifier}!!! \n")
+    # # -------------------------------------------------------------------------
+
+    # # -------------------------------------------------------------------------
+    # # ach_initialize_batches
+    # # This function makes sure that all households have the appropriate
+    # # deposit endowment for every step, in line with the parameters
+    # # -------------------------------------------------------------------------
+    # def ach_initialize_batches(self,  environment, time):
+    #     # Call endowment method in Households and Banks class
+    #     if time == 0:
+    #         # Loop through banks to create batches
+    #         for bank in environment.banks:
+    #             environment.get_agent_by_id("ach").batches[bank.identifier] = []
+    #             environment.get_agent_by_id("ach").collateral[bank.identifier] = 0
+    #     elif time > 0:
+    #         if time%environment.batch == 1:
+    #             # Loop through banks to create ach deposits and provide collateral
+    #             # Ensure reserves are sufficient
+    #             for bank in environment.banks:
+    #                 bank.ach_deposits_collateral(environment, time)
+    # # -------------------------------------------------------------------------
 
 
 

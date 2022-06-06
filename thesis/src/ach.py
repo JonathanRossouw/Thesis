@@ -113,7 +113,7 @@ class ACH(BaseAgent):
         # INSTEAD USE __getattr__ POWER TO CHANGE THE COMMAND FROM
         # instance.static_parameters["xyz"] TO instance.xyz - THE LATTER IS PREFERRED
         self.assets = ["ach_payer", "reserves"]
-        self.liabilities = ["ach_payee"]
+        self.liabilities = ["ach_payee", "clearing_house_fee"]
         self.batches = {}
         self.collateral = {}
         self.banks = []
@@ -201,8 +201,13 @@ class ACH(BaseAgent):
             bank_payer = self.get_account("ach_payer_" + item)
             environment.new_transaction(type_="ach_payee_"+item, asset='', from_=item, to="ach", amount=bank_payee, interest=0.00, maturity=0, time_of_default=-1)
             environment.new_transaction(type_="ach_payer_"+item, asset='', from_="ach", to=item, amount=bank_payer, interest=0.00, maturity=0, time_of_default=-1)
+            # Bank pays clearing house fee
+            ACH_fee_amount = environment.clearing_house_fee * payer[item]
+            ACH_fee_tranx = {"type_": "clearing_house_fee", "amount" : ACH_fee_amount, "bank_from":'ach', "bank_to":item, "time" : time}
+            environment.new_transaction(type_=ACH_fee_tranx['type_'], asset='', from_=ACH_fee_tranx['bank_from'], to=ACH_fee_tranx['bank_to'], amount=ACH_fee_tranx['amount'], interest=0.00, maturity=0, time_of_default=-1)
             # Transfer balance of reserves from bank to ach
-            payer_tranx = {"type_": "reserves", "amount" : payer[item], "bank_from":item, "bank_to":"ach", "time" : time}
+            reserve_amount = payer[item] + ACH_fee_amount
+            payer_tranx = {"type_": "reserves", "amount" : reserve_amount, "bank_from":item, "bank_to":"ach", "time" : time}
             environment.get_agent_by_id("central_bank").rgts_payment(environment, payer_tranx, time)        
         # Loop through ACH_payee accounts, call rtgs payment from ACH to bank
         for item in payee:
@@ -283,7 +288,7 @@ class ACH(BaseAgent):
                     account = "ach_payee_" + bank
                     liabilities[item] += self.get_account(account)
             else:
-                assets[item] += self.get_account(item)
+                liabilities[item] += self.get_account(item)
 
         balance_sheet["assets"] = assets
         balance_sheet["liabilities"] = liabilities
@@ -318,15 +323,21 @@ class ACH(BaseAgent):
 
         assets = []
         for item in self.assets:
-            for bank in self.banks:
-                account_payer = item + "_" + bank
-                assets.append(account_payer)
+            if "ach" in item:
+                for bank in self.banks:
+                    account_payer = item + "_" + bank
+                    assets.append(account_payer)
+            else:
+                assets.append(item)
 
         liabilities = []
         for item in self.liabilities:
-            for bank in self.banks:
-                account_payee = item + "_" + bank
-                liabilities.append(account_payee)
+            if "ach" in item:
+                for bank in self.banks:
+                    account_payee = item + "_" + bank
+                    liabilities.append(account_payee)
+            else:
+                liabilities.append(item)
 
         for transaction in self.accounts:
             if transaction.type_ in assets:
