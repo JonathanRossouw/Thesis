@@ -116,7 +116,7 @@ class Bank(BaseAgent):
         self.parameters["interest_rate_deposits"] = 0.0  # interest rate on deposits
         self.parameters["active"] = 0  # this is a control parameter checking whether bank is active
         self.parameters["bank"] = 0  # this is a control parameter checking whether bank is active
-        self.assets = ["loans", "reserves", "bank_notes", "open_market_operations", "clearing_house_fee"]
+        self.assets = ["loans", "reserves", "bank_notes", "open_market_operations"]
         self.liabilities = ["deposits", "receivables", "loans_central_bank"] #self.liabilities = ["capital_bank", "deposits", "open_market_operations", "ach_deposits"]
         self.bank_accounts = {}
         self.equity_households = {}
@@ -405,82 +405,6 @@ class Bank(BaseAgent):
             self.bank_accounts[tranx["from_"]]["deposits"] += tranx["amount"]
     # -------------------------------------------------------------------------
 
-    # # -------------------------------------------------------------------------
-    # # bank_asset_allocation
-    # # bank determines reserves from number of households and loan amounts
-    # # calls Central Bank method to initialize reserves and Open Market 
-    # # Transactions to balance assets and liabilities
-    # # -------------------------------------------------------------------------
-    # def bank_allocate_reserves(self, environment):
-    #     # Create reserves
-    #     reserves_required = 0.2 * self.get_account("deposits")
-    #     reserves_allocation = {"type_": "reserves", "from_": "central_bank", "to": self.identifier, "amount": reserves_required}
-    #     environment.get_agent_by_id("central_bank").new_reserves(environment, reserves_allocation)
-    #     print(f"\n{self.identifier} has {reserves_required} reserves, and {reserves_required} Open Market Operations")
-    #     #print(self.balance_sheet())
-    # # -------------------------------------------------------------------------
-
-    # # -------------------------------------------------------------------------
-    # # ach_deposits_collateral
-    # # Create deposits at ACH and provide collateral
-    # # -------------------------------------------------------------------------
-    # def ach_deposits_collateral(self, environment, time):
-    #     # Create deposits equal to the maximimum amount of deposits expected to be paid
-    #     # during single batching period. Collateral is equal to deposits. Negative deposits
-    #     # is not allowed.
-    #     ach_deposit_amount = self.get_account("deposits")
-    #     ach_deposit = {"type_": "ach_deposits", "from_": "ach", "to": self.identifier, "amount": ach_deposit_amount}
-    #     environment.new_transaction(type_=ach_deposit["type_"], asset='', from_= ach_deposit["from_"], to = ach_deposit["to"], amount = ach_deposit["amount"], interest=0.00, maturity=0, time_of_default=-1)
-    #     # New collateral with loans
-    #     ach_collateral_amount = ach_deposit_amount
-    #     ach_collateral = {"type_": "loans", "from_": self.identifier, "to": "ach", "amount": ach_collateral_amount}
-    #     environment.new_transaction(type_=ach_collateral["type_"], asset='', from_= ach_collateral["from_"], to = ach_collateral["to"], amount = ach_collateral["amount"], interest=0.00, maturity=0, time_of_default=-1)
-    #     environment.get_agent_by_id("ach").collateral[self.identifier] = ach_collateral_amount
-    #     # Ensure sufficient reserves
-    #     new_reserves = ach_deposit_amount - self.get_account("reserves")
-    #     if new_reserves > 0:
-    #         reserve_tranx = {"type_": "reserves", "from_": "central_bank", "to": self.identifier, "amount": new_reserves}
-    #         environment.get_agent_by_id("central_bank").new_reserves(environment, reserve_tranx)
-    # -------------------------------------------------------------------------
-
-
-    # # -------------------------------------------------------------------------
-    # # interbank_settle(environment, time)
-    # # This function settles the transactions following the shock. If from and 
-    # # to are at the same bank then transaction is settled. If different banks
-    # # then only every fourth period is settled.
-    # # -------------------------------------------------------------------------
-    # def interbank_settle(self,  environment, time):
-    #     # Settle payments by with banks
-    #     # Iterate through stored transactions
-    #     for tranx in self.store[:]:
-	# 		# Settlement of funds between customers of bank each period
-    #         if (tranx["bank_from"] == tranx["bank_to"]):
-	# 			# Transfer receipt from bank to household
-    #             environment.new_transaction(type_="deposits", asset='', from_= tranx["bank_from"], to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-	# 			# Remove stored transaction
-    #             self.store.remove(tranx)
-	# 			# Print details of transaction
-    #             print(f"\n{tranx['bank_from']}s transferred deposits of {tranx['amount']}f to {tranx['to']}s at time {time}d.")
-    #             #print(self.balance_sheet())
-			
-	# 		# Batch payments for transactions between customers of bank with households
-    #         # that are customers of different bank and settle every fourth period
-    #         elif (time % environment.batch == 0):
-    #             if self.get_account("reserves") < tranx["amount"]:
-    #                 print(f"{self.identifier} required more reserves, since {self.get_account('reserves')} reserves is less than {tranx['amount']} loan amount")
-    #                 # Increase reserves to finance loan
-    #                 reserves_tranx = {"from_":"central_bank", "to":self.identifier, "amount":tranx["amount"]}
-    #                 environment.get_agent_by_id("central_bank").new_reserves(environment, reserves_tranx)
-    #             # Call method at central bank to continue transaction
-    #             environment.get_agent_by_id("central_bank").rgts_payment(environment, tranx, time)
-	# 			# Remove stored transaction
-    #             self.store.remove(tranx)
-	# 			# Print details of transaction
-    #             print(f"\n{tranx['bank_from']}s RTGSed reserves of {tranx['amount']}f  to {'central_bank'}s at time {time}d.")
-    #             #print(self.balance_sheet())
-    # # -------------------------------------------------------------------------
-
     # -------------------------------------------------------------------------
     # balance_sheet
     # returns balance sheet of agent
@@ -633,3 +557,79 @@ class Bank(BaseAgent):
     def __getattr__(self, attr):
         return super(Bank, self).__getattr__(attr)
     # -------------------------------------------------------------------------
+
+    # # -------------------------------------------------------------------------
+    # # bank_asset_allocation
+    # # bank determines reserves from number of households and loan amounts
+    # # calls Central Bank method to initialize reserves and Open Market 
+    # # Transactions to balance assets and liabilities
+    # # -------------------------------------------------------------------------
+    # def bank_allocate_reserves(self, environment):
+    #     # Create reserves
+    #     reserves_required = 0.2 * self.get_account("deposits")
+    #     reserves_allocation = {"type_": "reserves", "from_": "central_bank", "to": self.identifier, "amount": reserves_required}
+    #     environment.get_agent_by_id("central_bank").new_reserves(environment, reserves_allocation)
+    #     print(f"\n{self.identifier} has {reserves_required} reserves, and {reserves_required} Open Market Operations")
+    #     #print(self.balance_sheet())
+    # # -------------------------------------------------------------------------
+
+    # # -------------------------------------------------------------------------
+    # # ach_deposits_collateral
+    # # Create deposits at ACH and provide collateral
+    # # -------------------------------------------------------------------------
+    # def ach_deposits_collateral(self, environment, time):
+    #     # Create deposits equal to the maximimum amount of deposits expected to be paid
+    #     # during single batching period. Collateral is equal to deposits. Negative deposits
+    #     # is not allowed.
+    #     ach_deposit_amount = self.get_account("deposits")
+    #     ach_deposit = {"type_": "ach_deposits", "from_": "ach", "to": self.identifier, "amount": ach_deposit_amount}
+    #     environment.new_transaction(type_=ach_deposit["type_"], asset='', from_= ach_deposit["from_"], to = ach_deposit["to"], amount = ach_deposit["amount"], interest=0.00, maturity=0, time_of_default=-1)
+    #     # New collateral with loans
+    #     ach_collateral_amount = ach_deposit_amount
+    #     ach_collateral = {"type_": "loans", "from_": self.identifier, "to": "ach", "amount": ach_collateral_amount}
+    #     environment.new_transaction(type_=ach_collateral["type_"], asset='', from_= ach_collateral["from_"], to = ach_collateral["to"], amount = ach_collateral["amount"], interest=0.00, maturity=0, time_of_default=-1)
+    #     environment.get_agent_by_id("ach").collateral[self.identifier] = ach_collateral_amount
+    #     # Ensure sufficient reserves
+    #     new_reserves = ach_deposit_amount - self.get_account("reserves")
+    #     if new_reserves > 0:
+    #         reserve_tranx = {"type_": "reserves", "from_": "central_bank", "to": self.identifier, "amount": new_reserves}
+    #         environment.get_agent_by_id("central_bank").new_reserves(environment, reserve_tranx)
+    # -------------------------------------------------------------------------
+
+
+    # # -------------------------------------------------------------------------
+    # # interbank_settle(environment, time)
+    # # This function settles the transactions following the shock. If from and 
+    # # to are at the same bank then transaction is settled. If different banks
+    # # then only every fourth period is settled.
+    # # -------------------------------------------------------------------------
+    # def interbank_settle(self,  environment, time):
+    #     # Settle payments by with banks
+    #     # Iterate through stored transactions
+    #     for tranx in self.store[:]:
+	# 		# Settlement of funds between customers of bank each period
+    #         if (tranx["bank_from"] == tranx["bank_to"]):
+	# 			# Transfer receipt from bank to household
+    #             environment.new_transaction(type_="deposits", asset='', from_= tranx["bank_from"], to = tranx["to"], amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
+	# 			# Remove stored transaction
+    #             self.store.remove(tranx)
+	# 			# Print details of transaction
+    #             print(f"\n{tranx['bank_from']}s transferred deposits of {tranx['amount']}f to {tranx['to']}s at time {time}d.")
+    #             #print(self.balance_sheet())
+			
+	# 		# Batch payments for transactions between customers of bank with households
+    #         # that are customers of different bank and settle every fourth period
+    #         elif (time % environment.batch == 0):
+    #             if self.get_account("reserves") < tranx["amount"]:
+    #                 print(f"{self.identifier} required more reserves, since {self.get_account('reserves')} reserves is less than {tranx['amount']} loan amount")
+    #                 # Increase reserves to finance loan
+    #                 reserves_tranx = {"from_":"central_bank", "to":self.identifier, "amount":tranx["amount"]}
+    #                 environment.get_agent_by_id("central_bank").new_reserves(environment, reserves_tranx)
+    #             # Call method at central bank to continue transaction
+    #             environment.get_agent_by_id("central_bank").rgts_payment(environment, tranx, time)
+	# 			# Remove stored transaction
+    #             self.store.remove(tranx)
+	# 			# Print details of transaction
+    #             print(f"\n{tranx['bank_from']}s RTGSed reserves of {tranx['amount']}f  to {'central_bank'}s at time {time}d.")
+    #             #print(self.balance_sheet())
+    # # -------------------------------------------------------------------------

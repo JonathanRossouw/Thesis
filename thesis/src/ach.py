@@ -47,6 +47,8 @@ class ACH(BaseAgent):
     batches = {}  # Store transactions for batching
     collateral = {} # Record bank collateral
     banks = []
+    clearing_house_fee_current = 0
+    clearing_house_fee_total = 0
 
     #
     #
@@ -113,10 +115,12 @@ class ACH(BaseAgent):
         # INSTEAD USE __getattr__ POWER TO CHANGE THE COMMAND FROM
         # instance.static_parameters["xyz"] TO instance.xyz - THE LATTER IS PREFERRED
         self.assets = ["ach_payer", "reserves"]
-        self.liabilities = ["ach_payee", "clearing_house_fee"]
+        self.liabilities = ["ach_payee"]
         self.batches = {}
         self.collateral = {}
         self.banks = []
+        self.clearing_house_fee_current = 0
+        self.clearing_house_fee_total = 0
 
         
     # -------------------------------------------------------------------------
@@ -203,8 +207,7 @@ class ACH(BaseAgent):
             environment.new_transaction(type_="ach_payer_"+item, asset='', from_="ach", to=item, amount=bank_payer, interest=0.00, maturity=0, time_of_default=-1)
             # Bank pays clearing house fee
             ACH_fee_amount = environment.clearing_house_fee * payer[item]
-            ACH_fee_tranx = {"type_": "clearing_house_fee", "amount" : ACH_fee_amount, "bank_from":'ach', "bank_to":item, "time" : time}
-            environment.new_transaction(type_=ACH_fee_tranx['type_'], asset='', from_=ACH_fee_tranx['bank_from'], to=ACH_fee_tranx['bank_to'], amount=ACH_fee_tranx['amount'], interest=0.00, maturity=0, time_of_default=-1)
+            self.clearing_house_fee_current += ACH_fee_amount # Store amount of clearing house fee 
             # Transfer balance of reserves from bank to ach
             reserve_amount = payer[item] + ACH_fee_amount
             payer_tranx = {"type_": "reserves", "amount" : reserve_amount, "bank_from":item, "bank_to":"ach", "time" : time}
@@ -219,6 +222,12 @@ class ACH(BaseAgent):
             # Transfer balance of reserves from ach to bank
             payee_tranx = {"type_": "reserves", "amount" : payee[item], "bank_from":"ach", "bank_to":item, "time" : time}
             environment.get_agent_by_id("central_bank").rgts_payment(environment, payee_tranx, time)
+        
+        # Pay total clearing house fee worth of reserves back to central bank
+        central_bank_reserves_tranx = {"type_": "reserves", "amount" : self.clearing_house_fee_current, "bank_from":"ach", "bank_to":"central_bank", "time" : time}
+        environment.get_agent_by_id("central_bank").rgts_payment(environment, central_bank_reserves_tranx, time)
+        self.clearing_house_fee_total += self.clearing_house_fee_current # store total amount of clearing house fees
+        self.clearing_house_fee_current = 0
     # -------------------------------------------------------------------------
 
 
