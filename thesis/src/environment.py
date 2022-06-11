@@ -53,6 +53,7 @@ class Environment(BaseConfig):
     total_output = 0 # Measurement of total output
     cbdc_transactions = []
     number_of_deposits = 0
+    clearing_house_fee_total = 0
 
     # Frequency of batching
     batch = 0

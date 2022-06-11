@@ -226,7 +226,7 @@ class ACH(BaseAgent):
         # Pay total clearing house fee worth of reserves back to central bank
         central_bank_reserves_tranx = {"type_": "reserves", "amount" : self.clearing_house_fee_current, "bank_from":"ach", "bank_to":"central_bank", "time" : time}
         environment.get_agent_by_id("central_bank").rgts_payment(environment, central_bank_reserves_tranx, time)
-        self.clearing_house_fee_total += self.clearing_house_fee_current # store total amount of clearing house fees
+        environment.clearing_house_fee_total += self.clearing_house_fee_current # store total amount of clearing house fees
         self.clearing_house_fee_current = 0
     # -------------------------------------------------------------------------
 

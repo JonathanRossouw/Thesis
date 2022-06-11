@@ -165,14 +165,21 @@ class Measurement(BaseMeasurement):
     # Wrapper for functions returning the desired values to be written
     # -------------------------------------------------------------------------
     def wrapper(self, ident):
+        if ident == "current_step":
+            return self.runner.current_step+1
+
+        else:
+            method = getattr(self.environment, ident)
+            return method
+
+        
         deposits_balance = 0
         cbdc_balance = 0
         for tranx in self.environment.central_bank[0].accounts:
             if tranx.type_ == "cbdc":
                 cbdc_balance += tranx.amount
 
-        if ident == "current_step":
-            return self.runner.current_step+1
+        
             
         if ident == "total_output":
             return self.environment.total_output

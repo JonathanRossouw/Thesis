@@ -108,6 +108,7 @@ class Updater(BaseModel):
         self.check_reserve_requirements(environment, time)
         # Purging accounts at every step just in case
         self.update_equity(environment, time)
+        self.write_agent_balance_sheets(environment, time)
         print(f"Period {time} complete")
         transaction = Transaction()
         transaction.purge_accounts(environment)
@@ -552,6 +553,32 @@ class Updater(BaseModel):
         # for bank in environment.banks:
         #     print(bank.balance_sheet())
 
+    # -------------------------------------------------------------------------
+
+    # -------------------------------------------------------------------------
+    # write_agent_balance_sheets(environment, time)
+    # Loop through each class of agent, call balance sheet method, record in 
+    # json file
+    # -------------------------------------------------------------------------
+    def write_agent_balance_sheets(self,  environment, time):
+        import json
+        # Loop through agent types
+        for agent_list in environment.agents:
+            id_ = agent_list[0].identifier.split("_") # Split agent id to determine type of agent
+            agent_balance_sheets = [] # Empty list for storing balance sheets
+            for agent in agent_list: # Loop through different individual agents of same type
+                agent_balance_sheets.append(agent.balance_sheet()) # Call balance sheet method and append list
+            file_output = str('measurements/' + id_[0] + '_output' '.json') # Path for json file
+
+            if time == 0: # If time 0, clear json file and write step time as key and list of balance sheets as values
+                with open(file_output, 'w') as output:
+                    output.write( "[{}]".format(json.dumps({time:agent_balance_sheets})))
+            else: # if time > 0, write step time as key and list of balance sheets as values with special formatting
+                with open(file_output, 'r+') as output:
+                    output.seek(0,2)
+                    position = output.tell() -1
+                    output.seek(position)
+                    output.write( ",{}]".format(json.dumps({time:agent_balance_sheets})))
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
