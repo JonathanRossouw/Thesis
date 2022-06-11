@@ -81,6 +81,7 @@ class Environment(BaseConfig):
 
     # Interest Rates
 
+    static_parameters["interest_rate_list"] = []
     static_parameters["reserves_interest"] = 0 
     static_parameters["central_bank_loans_interest"] = 0 
     static_parameters["open_market_operations_interest"] = 0 
@@ -281,6 +282,7 @@ class Environment(BaseConfig):
         self.static_parameters["household_directory"] = ""
         self.static_parameters["ach_directory"] = ""
         self.static_parameters["batch"] = 0
+        self.static_parameters["interest_rate_list"] = []
         self.static_parameters["reserves_interest"] = 0 
         self.static_parameters["central_bank_loans_interest"] = 0 
         self.static_parameters["open_market_operations_interest"] = 0 
@@ -677,6 +679,17 @@ class Environment(BaseConfig):
         super(Environment, self).check_global_transaction_balance(type_)
     # -------------------------------------------------------------------------
 
+    # # -------------------------------------------------------------------------
+    # # accrue_interests()
+    # # This method accrues interest on all transaction
+    # # making sure we don't double count the transactions that are
+    # # on the books of multiple agents, interest is specified within the
+    # # transaction itself
+    # # -------------------------------------------------------------------------
+    # def accrue_interests(self):
+    #     super(Environment, self).accrue_interests()
+    # # -------------------------------------------------------------------------
+
     # -------------------------------------------------------------------------
     # accrue_interests()
     # This method accrues interest on all transaction
@@ -685,7 +698,21 @@ class Environment(BaseConfig):
     # transaction itself
     # -------------------------------------------------------------------------
     def accrue_interests(self):
-        super(Environment, self).accrue_interests()
+        done_list = []  # This keeps the IDs of updated transactions
+        # The above is important as the same transactions may be on the books
+        # of different agents, we don't want to double count the interest
+        amount = 0
+        for agent in self.agents_generator():  # Iterate over all agents
+            for tranx in agent.accounts:  # Iterate over all transactions
+                if tranx.type_ in self.interest_rate_list:
+                    if tranx.identifier not in done_list:  # If not amended previously
+                        # The below adds the interest on the principal amount
+                        tranx.amount = tranx.amount + tranx.amount * tranx.interest
+                        amount += tranx.amount * tranx.interest
+                        # The below makes sure that we don't double count
+                        done_list.append(tranx.identifier)
+        print(f"{amount} interest paid")
+    # a standard method for accruing interest on all transactions
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

@@ -87,7 +87,7 @@ class Updater(BaseModel):
         # If time is 0, endow agents with endowments
         self.endow_agents(environment, time)
         # Accrue Interests
-        #self.accrue_interests(environment, time)
+        self.accrue_interests(environment, time)
         # Every batch*2 + 1 periods settle central bank then interbank loans
         self.settle_central_bank_loans(environment, time)
         self.settle_interbank_loans(environment, time)
@@ -237,6 +237,12 @@ class Updater(BaseModel):
     # transaction itself
     # -------------------------------------------------------------------------
     def accrue_interests(self,  environment, time):
+        if time == 0:
+            environment.interest_rate_list = environment.interest_rate_list.split(',')
+        if 'interbank_loans' in environment.interest_rate_list:
+            environment.interest_rate_list.remove('interbank_loans')
+            for bank in environment.banks:
+                environment.interest_rate_list.append("interbank_loans_" + bank.identifier)
         if time > 0 and time%(environment.batch*2 + 1) == 0:
             environment.accrue_interests()
             print("Interest Accrued")
