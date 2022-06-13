@@ -54,6 +54,7 @@ class Environment(BaseConfig):
     cbdc_transactions = []
     number_of_deposits = 0
     clearing_house_fee_total = 0
+    number_of_batched_payments = 0
 
     # Frequency of batching
     batch = 0

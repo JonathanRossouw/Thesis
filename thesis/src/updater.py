@@ -187,7 +187,7 @@ class Updater(BaseModel):
     # -------------------------------------------------------------------------
     def update_equity(self,  environment, time):
         # Call allocation method in Firms class
-        if time > 0 and time%(environment.batch*2) == 0:
+        if time > 0:# and time%(environment.batch*2) == 0:
             E = environment.employment_network
             for firm in environment.firms:
                 for hh in E.adj[firm.identifier]:
@@ -239,10 +239,10 @@ class Updater(BaseModel):
     def accrue_interests(self,  environment, time):
         if time == 0:
             environment.interest_rate_list = environment.interest_rate_list.split(',')
-        if 'interbank_loans' in environment.interest_rate_list:
-            environment.interest_rate_list.remove('interbank_loans')
-            for bank in environment.banks:
-                environment.interest_rate_list.append("interbank_loans_" + bank.identifier)
+            if 'interbank_loans' in environment.interest_rate_list:
+                environment.interest_rate_list.remove('interbank_loans')
+                for bank in environment.banks:
+                    environment.interest_rate_list.append("interbank_loans_" + bank.identifier)
         if time > 0 and time%(environment.batch*2 + 1) == 0:
             environment.accrue_interests()
             print("Interest Accrued")

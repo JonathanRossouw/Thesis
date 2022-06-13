@@ -165,6 +165,7 @@ class ACH(BaseAgent):
     # takes in transaction details from household or firms and makes payment
     # -------------------------------------------------------------------------
     def make_ach_payment(self, environment, tranx, time):
+        environment.number_of_batched_payments += 1
         # Payers bank debits on ACH account
         tranx_payer = "ach_payer_" + tranx["bank_from"]
         environment.new_transaction(type_=tranx_payer, asset='', from_= tranx["bank_from"], to = "ach", amount = tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)

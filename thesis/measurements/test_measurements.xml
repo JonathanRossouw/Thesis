@@ -5,4 +5,5 @@
     <parameter type='output' column='2' header='total_output' value='total_output' ></parameter>
     <parameter type='output' column='3' header='number_of_deposits' value='number_of_deposits' ></parameter>
     <parameter type='output' column='4' header='clearing_house_fee_total' value='clearing_house_fee_total' ></parameter>
+    <parameter type='output' column='5' header='number_of_batched_payments' value='number_of_batched_payments' ></parameter>
 </measurement>
