@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<household identifier= 'household_41'>
+    <parameter name='npv' value='877.0'></parameter>
+    <parameter name='wealth' value='877.0'></parameter>
+    <parameter name='labour' value='1'></parameter>
+</household>

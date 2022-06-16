@@ -1,0 +1,4 @@
+<central_bank identifier='central_bank'>
+    <parameter type='static' name='interest_rate_cb_loans' value='0.00'></parameter>
+    <transaction type='cbdc' asset='' from='central_bank' to='central_bank' amount='0' interest='0.00' maturity='0' time_of_default='-1'></transaction>
+</central_bank>
