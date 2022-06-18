@@ -99,7 +99,7 @@ class Measurement(BaseMeasurement):
         super(Measurement, self).set_csv_writer(csv_writer)
 
     # -------------------------------------------------------------------------
-    # __init__(self, environment, runner)
+    # __init__(self, environment, runner) 
     # Initialises the Measurements object and reads the config
     # -------------------------------------------------------------------------
     def __init__(self, environment, runner):

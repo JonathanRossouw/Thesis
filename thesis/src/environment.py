@@ -55,6 +55,7 @@ class Environment(BaseConfig):
     number_of_deposits = 0
     clearing_house_fee_total = 0
     number_of_batched_payments = 0
+    number_of_cleared_payments = 0
 
     # Frequency of batching
     batch = 0
@@ -90,6 +91,7 @@ class Environment(BaseConfig):
     static_parameters["loans_interest"] = 0 
     static_parameters["deposits_interest"] = 0 
     static_parameters["clearing_house_fee"] = 0 
+    static_parameters["number_of_cleared_payments"] = 0
 
 
 
@@ -291,6 +293,7 @@ class Environment(BaseConfig):
         self.static_parameters["loans_interest"] = 0 
         self.static_parameters["deposits_interest"] = 0 
         self.static_parameters["clearing_house_fee"] = 0 
+        self.static_parameters["number_of_cleared_payments"] = 0
         self.variable_parameters = {}
         self.network = nx.DiGraph()
 

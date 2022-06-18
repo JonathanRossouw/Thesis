@@ -94,22 +94,22 @@ class Network(object):
 			households = list(self.employment_network.adj[firm.identifier])
 			firm_id.append(firm.identifier)
 			hh_count.append(len(households)) 
-		while min(hh_count) == 0:
-			firm_min_id = firm_id[hh_count.index(min(hh_count))]
-			firm_max_id = firm_id[hh_count.index(max(hh_count))]
+			while min(hh_count) == 0:
+				firm_min_id = firm_id[hh_count.index(min(hh_count))]
+				firm_max_id = firm_id[hh_count.index(max(hh_count))]
 
-			household_max = list(self.employment_network.adj[firm_max_id])[0]
+				household_max = list(self.employment_network.adj[firm_max_id])[0]
 
-			self.employment_network.add_edge(household_max, firm_min_id)
-			self.employment_network.remove_edge(household_max, firm_max_id)
+				self.employment_network.add_edge(household_max, firm_min_id)
+				self.employment_network.remove_edge(household_max, firm_max_id)
 
-			hh_count = []
-			firm_id = []
+				hh_count = []
+				firm_id = []
 
-			for firm in environment.firms:
-				households = list(self.employment_network.adj[firm.identifier])
-				firm_id.append(firm.identifier)
-				hh_count.append(len(households)) 
+				for firm in environment.firms:
+					households = list(self.employment_network.adj[firm.identifier])
+					firm_id.append(firm.identifier)
+					hh_count.append(len(households)) 
 	#-------------------------------------------------------------------------
 
 	#-------------------------------------------------------------------------
@@ -155,25 +155,65 @@ class Network(object):
 		import random
 		# Create networkx graph instance
 		self.bank_network = nx.Graph()
-		# Loop through banks adding nodes to network
-		for bank in environment.banks:
-			self.bank_network.add_node(bank.identifier, id = "bank")
+					
 		# Loop through households and firms adding nodes to network and for each
 		# household and firm, adds edge between bank where agent is customer
 		# and agent
-		for house in environment.households:
-			# Add household to network
-			self.bank_network.add_node(house.identifier, id = "household")
-			# Create edge between household and bank
-			bank_id = random.sample(environment.banks, 1)[0].identifier
-			self.bank_network.add_edge(house.identifier, bank_id)
 
-		for firm in environment.firms:
-			# Add firm to network
-			self.bank_network.add_node(firm.identifier, id = "household")
-			# Create edge between firm and bank
-			bank_id = random.sample(environment.banks, 1)[0].identifier
-			self.bank_network.add_edge(firm.identifier, bank_id)
+		# # Loop through banks adding nodes to network and create dict for banks
+		bank_count = len(environment.banks)
+		bank_ids = {}
+		for bank in environment.banks:
+			self.bank_network.add_node(bank.identifier, id = "bank")
+			bank_ids[bank.identifier] = []
+
+		# Create list of households and add to network
+		hh_ids = []
+		[hh_ids.append(x.identifier) for x in environment.households]
+		for hh in hh_ids:
+			self.bank_network.add_node(hh, id = "household")
+
+		# Shuffle households ids
+		random.shuffle(hh_ids)
+		
+		# Match banks and households
+		for i, key in enumerate(bank_ids):
+			bank_ids[key] = hh_ids[i::bank_count]
+		# Add edge between bank and households
+		for key in bank_ids:
+			for values in bank_ids[key]:
+				self.bank_network.add_edge(values, key)
+		# Create list of firms and add to network
+		firm_ids = []
+		[firm_ids.append(x.identifier) for x in environment.firms]
+		for firm in firm_ids:
+			self.bank_network.add_node(firm, id = "firm")
+		# Shuffle firm ids
+		random.shuffle(firm_ids)
+		# Match banks and firms
+		for i, key in enumerate(bank_ids):
+			bank_ids[key] = firm_ids[i::bank_count]
+		# Add edge between bank and firm
+		for key in bank_ids:
+			for values in bank_ids[key]:
+				self.bank_network.add_edge(values, key)
+
+
+
+
+		# for house in environment.households:
+		# 	# Add household to network
+		# 	self.bank_network.add_node(house.identifier, id = "household")
+		# 	# Create edge between household and bank
+		# 	bank_id = random.sample(environment.banks, 1)[0].identifier
+		# 	self.bank_network.add_edge(house.identifier, bank_id)
+
+		# for firm in environment.firms:
+		# 	# Add firm to network
+		# 	self.bank_network.add_node(firm.identifier, id = "household")
+		# 	# Create edge between firm and bank
+		# 	bank_id = random.sample(environment.banks, 1)[0].identifier
+		# 	self.bank_network.add_edge(firm.identifier, bank_id)
 
 
 		# Make sure all banks have at least one household or firm
@@ -183,22 +223,22 @@ class Network(object):
 			agents = list(self.bank_network.adj[bank.identifier])
 			bank_id.append(bank.identifier)
 			agent_count.append(len(agents)) 
-		while min(agent_count) == 0:
-			bank_min_id = bank_id[agent_count.index(min(agent_count))]
-			bank_max_id = bank_id[agent_count.index(max(agent_count))]
+			while min(agent_count) == 0:
+				bank_min_id = bank_id[agent_count.index(min(agent_count))]
+				bank_max_id = bank_id[agent_count.index(max(agent_count))]
 
-			agent_max = list(self.bank_network.adj[bank_max_id])[0]
+				agent_max = list(self.bank_network.adj[bank_max_id])[0]
 
-			self.bank_network.add_edge(agent_max, bank_min_id)
-			self.bank_network.remove_edge(agent_max, bank_max_id)
+				self.bank_network.add_edge(agent_max, bank_min_id)
+				self.bank_network.remove_edge(agent_max, bank_max_id)
 
-			agent_count = []
-			bank_id = []
+				agent_count = []
+				bank_id = []
 
-			for bank in environment.banks:
-				agents = list(self.bank_network.adj[bank.identifier])
-				bank_id.append(bank.identifier)
-				agent_count.append(len(agents)) 
+				for bank in environment.banks:
+					agents = list(self.bank_network.adj[bank.identifier])
+					bank_id.append(bank.identifier)
+					agent_count.append(len(agents)) 
 	#-------------------------------------------------------------------------
 
 

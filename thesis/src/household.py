@@ -196,7 +196,7 @@ class Household(BaseAgent):
 
 
         # Determine asset allocation
-        liquid_deposits = floor(30 * round(random.uniform(0.6, 1.6), 2))
+        liquid_deposits = floor(self.wealth * 0.4 * random.uniform(0.6, 2))
         # Remainder of wealth divided between firm and bank capital
         equity_firm_amount = floor((bank_notes - liquid_deposits)/2)
         equity_bank_amount = bank_notes - liquid_deposits - equity_firm_amount

@@ -255,7 +255,7 @@ class Firm(BaseAgent):
         for id_ in households:
             house = environment.get_agent_by_id(id_)
             labour += house.labour # Could be changed to a stochastic variable where household decide whether or not to provide labour
-        capital = 1
+        capital = self.capital * 0.01
         gamma = 1
         beta = 1    
         # Produce Output

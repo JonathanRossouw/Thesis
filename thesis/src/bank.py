@@ -324,6 +324,7 @@ class Bank(BaseAgent):
                 environment.new_transaction(type_="deposits", asset='', from_= tranx["bank_to"], to = tranx["to"], amount = tranx["amount"], interest=environment.deposits_interest, maturity=0, time_of_default=-1)
                 environment.get_agent_by_id(tranx["bank_to"]).bank_accounts[tranx["to"]]["deposits"] += tranx["amount"]
                 #print(f"\n Rapid payment from {tranx['from_']} to {tranx['to']} of {tranx['amount']} at time {tranx['time']}")
+                environment.number_of_cleared_payments += 1
 
             elif environment.batch > 1:
                 # Household or firm paying credits their deposit account and their bank debits their deposit account
@@ -367,7 +368,7 @@ class Bank(BaseAgent):
     def check_required_reserves(self):
         from numpy import floor
         # Determine reserves required
-        required_reserves = self.get_account("deposits") * 0.02 # reserves requirements rule
+        required_reserves = self.get_account("deposits") * 0.025 # reserves requirements rule
         reserves_residual = self.get_account("reserves") - required_reserves
         return reserves_residual
     # -------------------------------------------------------------------------

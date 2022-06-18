@@ -166,7 +166,7 @@ class Updater(BaseModel):
             for bank in environment.banks:
                 bank.bank_initialize(environment)
             #logging.info("  deposit endowed on step: %s",  time)
-        # Keep on the log with the number of step, for debugging mostly
+        # Keep on the log with the number of step, for debugging mostly 
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
@@ -245,7 +245,7 @@ class Updater(BaseModel):
                     environment.interest_rate_list.remove('interbank_loans')
                     for bank in environment.banks:
                         environment.interest_rate_list.append("interbank_loans_" + bank.identifier)
-        if time > 0 and time%(environment.batch) == 0:
+        if time > 0:# and time%(environment.batch) == 0:
             environment.accrue_interests()
             logging.info("  Interest Accrued: %s",  time)
         #logging.info("  interest accrued on step: %s",  time)
@@ -281,7 +281,7 @@ class Updater(BaseModel):
 
             # Wages on the 25th of the month
             # if (int(day) % 25) == 0:
-            if time%(environment.batch * 25) == 0:
+            if time % 25 == 0:
                 E = environment.employment_network
                 # Loop through firms in the network and pay wages
                 for u in E.nodes(data=False):
@@ -378,7 +378,7 @@ class Updater(BaseModel):
     # This function settles all interbank loans at beginning of period
     # -------------------------------------------------------------------------
     def settle_interbank_loans(self, environment, time):
-        if time > 0 and time%(environment.batch + 1) == 0:
+        if time > 0:# and time%(environment.batch + 1) == 0:
             for bank in environment.banks:
                 bank.settle_interbank_loan(environment, time)
                 #print(bank.balance_sheet())
@@ -389,10 +389,10 @@ class Updater(BaseModel):
     # This function settles all interbank loans at beginning of period
     # -------------------------------------------------------------------------
     def settle_central_bank_loans(self, environment, time):
-        if time > 0 and time%(environment.batch*2 + 1) == 0:
+        if time > 0:# and time%(environment.batch*2 + 1) == 0:
             for bank in environment.banks:
                 central_bank_loans_amount = bank.get_account("loans_central_bank")
-                if central_bank_loans_amount > 0:
+                if round(central_bank_loans_amount, 5) > 0:
                     central_bank_loan_settle_tranx = {"type_": "loans_central_bank", "bank_from": "central_bank", "bank_to" : bank.identifier, "amount" : central_bank_loans_amount, "time" : time}
                     environment.get_agent_by_id("central_bank").settle_central_bank_loan(environment, central_bank_loan_settle_tranx, time)
                 #print(bank.balance_sheet())
@@ -441,7 +441,7 @@ class Updater(BaseModel):
                     environment.get_agent_by_id("central_bank").sell_open_market_operations(environment, sell_omo_tranx, time)
 
         # Required reserves during simulation
-        if time%(environment.batch) == 0 and time > 0:
+        if time > 0:# and time%(environment.batch) == 0:
             # Create list of banks and reserve status
             bank_deficit = {} # Deficit dict
             bank_surplus = {} # Surplus dict
@@ -458,7 +458,7 @@ class Updater(BaseModel):
 
             # Check if overall reserve requirement for banks met
 
-            reserves_required = deposits * 0.02
+            reserves_required = deposits * 0.025
             reserves_total = environment.get_agent_by_id("central_bank").get_account("reserves")
             reserve_residual = round(reserves_total - reserves_required, 6)
 

@@ -1,6 +1,7 @@
 import sys
 import logging
 import os
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
 import networkx as nx
 import matplotlib.pyplot as plt
 
@@ -34,12 +35,12 @@ The development of this software has been supported by the ERA-Net
 on Complexity through the grant RESINEE.
 """
 
-args = ['./sim_script.py',  "environments/", "CBDC_parameters",  "log/"]
-# args = sys.argv
+#args = ['./sim_script.py',  "environments/", "CBDC_parameters",  "log/"]
+args = sys.argv
 
-if len(args) != 4:
-    print("Usage: ./sim_script environment_directory/ environment_identifier log_directory/")
-    sys.exit()
+# if len(args) != 4:
+#     print("Usage: ./sim_script environment_directory/ environment_identifier log_directory/")
+#     sys.exit()
 
 #
 # INITIALIZATION
@@ -49,6 +50,9 @@ if len(args) != 4:
 environment_directory = str(args[1])
 identifier = str(args[2])
 log_directory = str(args[3])
+num_households = int(args[4])
+num_firms = int(args[5])
+num_banks = int(args[6])
 
 # Create Logger
 
@@ -58,8 +62,7 @@ logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S
                     filename=log_directory + identifier + ".log", level=logging.INFO)
 logging.info('START logging for run: %s',  environment_directory + identifier + ".xml")
 
-# Create Environment
-environment = Environment(environment_directory,  identifier)
+
 
 # Read in directory for agents
 remove = True
@@ -85,11 +88,14 @@ for f in firm_list:
 
 gen_agents = Generate_Agents()
 
-gen_agents.generate_households(environment.static_parameters['num_households'], "./agents/gen_households/")
+gen_agents.generate_households(num_households, "./agents/gen_households/")
 
-gen_agents.generate_firms(environment.static_parameters['num_firms'], "./agents/gen_firms/")
+gen_agents.generate_firms(num_firms, "./agents/gen_firms/")
 
-gen_agents.generate_banks(environment.static_parameters['num_banks'], "./agents/gen_banks/")
+gen_agents.generate_banks(num_banks, "./agents/gen_banks/")
+
+# Create Environment
+environment = Environment(environment_directory,  identifier)
 
 # Create Runner
 runner = Runner(environment)

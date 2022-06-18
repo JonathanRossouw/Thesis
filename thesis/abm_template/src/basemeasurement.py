@@ -269,7 +269,7 @@ class BaseMeasurement(object):
     #     <parameter type='output' column='1' header='Step' value='current_step'></parameter>
     #     <parameter type='output' column='2' header='Deposits' value='household_deposits' ></parameter>
     # </measurement>
-    #
+    # 
     # -------------------------------------------------------------------------
     @abc.abstractmethod
     def read_xml_config_file(self, config_file_name):
