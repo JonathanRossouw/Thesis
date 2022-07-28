@@ -141,22 +141,6 @@ class CentralBank(BaseAgent):
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------
-    # make_cbdc_payment
-    # takes in transaction details from household and makes payment
-    # -------------------------------------------------------------------------
-    def make_cbdc_payment(self, environment, tranx, time):
-		# Transfer funds from household to central bank to household
-        environment.new_transaction(type_="cbdc", asset='', from_=tranx["from_"], to="central_bank", amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-        # Transfer funds from central bank to household
-        environment.new_transaction(type_="cbdc", asset='', from_="central_bank", to=tranx["to"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-		# We print the action of selling to the screen
-        print(f"\n{tranx['from_']}s paid {tranx['amount']}f of cbdc to {'central_bank'}s for {tranx['to']}s at time {tranx['time']}d.")
-        print(f"\n{'central_bank'}s settled {tranx['amount']}f of cbdc to {tranx['to']}s at time {tranx['time']}d.")
-        #print(self.balance_sheet())
-        #logging.info("  payments made on step: %s",  time)
-    # -------------------------------------------------------------------------
-
-    # -------------------------------------------------------------------------
     # initialize_bank_notes
     # takes in transaction details from household and makes payment
     # -------------------------------------------------------------------------
@@ -210,50 +194,6 @@ class CentralBank(BaseAgent):
         #print(f"\n RTGS payment of {tranx['amount']} of reserves from {tranx['bank_from']} to {tranx['bank_to']} at time {time}d.")
         #print(self.balance_sheet())
         #logging.info("  payments made on step: %s",  time)
-    # -------------------------------------------------------------------------
-
-    # -------------------------------------------------------------------------
-    # cbdc_settle
-    # Household exchanges deposits at bank for cbdc at central bank
-    # -------------------------------------------------------------------------
-    def cbdc_settle(self, environment, tranx, time):
-        if tranx["to"] is "central_bank":
-            # Transfer CBDC to Agent
-            environment.new_transaction(type_="cbdc", asset='', from_=tranx["bank_to"], to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-            # Transfer Open Market Operations to Bank
-            environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to=tranx["bank_to"], amount=tranx["amount"], interest=environment.open_market_operations_interest, maturity=0, time_of_default=-1)
-            print(f"\nCBDC settlement of {tranx['amount']} to {tranx['from_']} complete")
-            #print(self.balance_sheet())
-        elif tranx["to"] != "central_bank":
-            # Transfer CBDC from Agent to Central Bank
-            environment.new_transaction(type_="cbdc", asset='', from_=tranx["to"], to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-            # Transfer Open Market Operations from Bank to Central Bank
-            environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to=tranx["bank_to"], amount=tranx["amount"], interest=environment.open_market_operations_interest, maturity=0, time_of_default=-1)
-            print(f"\nCBDC settlement of {tranx['amount']} to {tranx['from_']} complete")
-            #print(self.balance_sheet())
-    # -------------------------------------------------------------------------
-
-
-    # -------------------------------------------------------------------------
-    # bank_notes_settle
-    # Household exchanges deposits at bank for Bank Notes at Central Bank
-    # -------------------------------------------------------------------------
-    def bank_notes_settle(self, environment, tranx, time):
-        if tranx["to"] is "central_bank":
-            # Transfer Bank Notes to Household
-            environment.new_transaction(type_="bank_notes", asset='', from_="central_bank", to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-            # Transfer Open Market Operations to Bank
-            environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to="central_bank", amount=tranx["amount"], interest=environment.open_market_operations_interest, maturity=0, time_of_default=-1)
-            # Increase Bank Reserves equal to increase Open Market Operations agreement
-            #print(f"\n Bank Notes settlement of {tranx['amount']} to {tranx['from_']} complete")
-        elif tranx["to"] != "central_bank":
-            # Transfer Bank Notes to Household
-            environment.new_transaction(type_="bank_notes", asset='', from_="central_bank", to=tranx["from_"], amount=tranx["amount"], interest=0.00, maturity=0, time_of_default=-1)
-            # Transfer Open Market Operations to Bank
-            environment.new_transaction(type_="open_market_operations", asset='', from_=tranx["bank_from"], to="central_bank", amount=tranx["amount"], interest=environment.open_market_operations_interest, maturity=0, time_of_default=-1)
-            # Increase Bank Reserves equal to increase Open Market Operations agreement
-            #print(f"\n Bank Notes settlement of {tranx['amount']} to {tranx['from_']} complete")
-        #print(self.balance_sheet())
     # -------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------

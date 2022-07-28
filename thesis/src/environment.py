@@ -683,17 +683,6 @@ class Environment(BaseConfig):
         super(Environment, self).check_global_transaction_balance(type_)
     # -------------------------------------------------------------------------
 
-    # # -------------------------------------------------------------------------
-    # # accrue_interests()
-    # # This method accrues interest on all transaction
-    # # making sure we don't double count the transactions that are
-    # # on the books of multiple agents, interest is specified within the
-    # # transaction itself
-    # # -------------------------------------------------------------------------
-    # def accrue_interests(self):
-    #     super(Environment, self).accrue_interests()
-    # # -------------------------------------------------------------------------
-
     # -------------------------------------------------------------------------
     # accrue_interests()
     # This method accrues interest on all transaction

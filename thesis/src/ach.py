@@ -239,49 +239,7 @@ class ACH(BaseAgent):
         environment.clearing_house_fee_total += self.clearing_house_fee_current # store total amount of clearing house fees
         self.clearing_house_fee_current = 0
     # -------------------------------------------------------------------------
-
-
-    # # -------------------------------------------------------------------------
-    # # batch_settle
-    # # determine which banks have positive and negative batch accounts
-    # # -------------------------------------------------------------------------
-    # def batch_settle(self, environment, time):
-    #     # Import market
-    #     from src.market import Market
-    #     # Aggregate payments and determine balances
-    #     for banks in self.batches:
-    #         self.batches[banks] = sum(self.batches[banks])
-    #     # Create list of balances for rationing
-    #     batches_ration = []
-    #     for key, value in self.batches.items():
-    #         batches_ration.append([key, value])
-    #     # Perform rationing
-    #     mark = Market(environment)
-    #     ach_settle = mark.rationing(batches_ration)
-    #     # Loop through rationing tranactions and call interbank settlement mtheod to net reserve payments
-    #     for tranx in ach_settle:
-    #         # Transfer Reserves between banks
-    #         rgts_tranx = {"bank_from":tranx[0], "bank_to":tranx[1], "amount":tranx[2]}
-    #         environment.get_agent_by_id("central_bank").rgts_payment(environment, rgts_tranx, time)
-    #         print(f"\n {tranx[0]} settled {tranx[1]} worth of reserves to {tranx[2]} \n")
-    #     for bank in environment.banks:
-    #     # Transfer ACH deposits
-    #         ach_deposits = bank.get_account("ach_deposits")
-    #         bank_id = bank.identifier
-    #         environment.new_transaction(type_="ach_deposits", asset='', from_="ach", to=bank_id, amount=ach_deposits, interest=0.00, maturity=0, time_of_default=-1)
-    #         print(f"\n ACH settled {-ach_deposits} worth of ACH deposits to {bank_id} \n")
-    #     # Return bank collateral
-    #     for bank in self.collateral:
-    #         collateral_amount = self.collateral[bank]
-    #         environment.new_transaction(type_="loans", asset='', from_=self.identifier, to=bank, amount=collateral_amount, interest=0.00, maturity=0, time_of_default=-1)
-    #         self.collateral[bank] = 0
-    #     # Reset batches
-    #     for bank in self.batches:
-    #         # Transfer collateral 
-    #         self.batches[bank] = []
-    # # -------------------------------------------------------------------------
-
-
+    
 
     # -------------------------------------------------------------------------
     # balance_sheet
